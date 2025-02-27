@@ -1,0 +1,42 @@
+CIELAB => LAB
+
+Cet espace est conçu pour être perceptuellement uniforme, c’est-à-dire que les différences de couleurs perçues par l'œil humain correspondent mieux aux distances dans cet espace que dans d’autres espaces comme RGB.
+
+L (Luminance) → Intensité lumineuse (0 = noir, 100 = blanc).
+a → Représente l’axe vert ↔ rouge (-128 = vert pur, +127 = rouge pur).
+b → Représente l’axe bleu ↔ jaune (-128 = bleu pur, +127 = jaune pur).
+
+On sépare la lumière des chrominence (couleurs)
+
+
+/ PHASE 1 : Conversion RGB → XYZ
+1.1 Normaliser chaque canal RGB dans [0,1] :  
+    R' = R / 255  
+    G' = G / 255  
+    B' = B / 255  
+1.2 Appliquer la correction gamma inverse (sRGB → Linéaire) :  
+    Si (R' ≤ 0.04045) alors R' = R' / 12.92  
+    Sinon R' = ((R' + 0.055) / 1.055) ^ 2.4  
+    (Même chose pour G' et B')  
+1.3 Calculer les valeurs XYZ avec la matrice de transformation :  
+    X = 0.4124564 * R' + 0.3575761 * G' + 0.1804375 * B'  
+    Y = 0.2126729 * R' + 0.7151522 * G' + 0.0721750 * B'  
+    Z = 0.0193339 * R' + 0.1191920 * G' + 0.9503041 * B'  
+
+// PHASE 2 : Conversion XYZ → CIELab
+2.1 Normaliser les valeurs par les **valeurs de référence** (illuminant D65) :  
+    X = X / 95.047  
+    Y = Y / 100.000  
+    Z = Z / 108.883  
+2.2 Appliquer la transformation de **fonction f(t)** :  
+    f(t) = t^(1/3) si t > 0.008856  
+           (7.787 * t) + (16 / 116) sinon  
+2.3 Calculer les composantes Lab :  
+    L = 116 * f(Y) - 16  
+    a = 500 * (f(X) - f(Y))  
+    b = 200 * (f(Y) - f(Z))  
+
+// PHASE 3 : Stocker les valeurs (L dans [0,100], a et b dans [-128,127])
+
+
+

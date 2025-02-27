@@ -64,8 +64,8 @@ void Image::read() {
  * \param filename Nom du fichier image.
  * \details Les données de l'image sont stockées dans le tableau data.
  * \details Si le format de l'image est PPM, les données sont écrites dans une seule image .ppm
- * \details Si le format de l'image est PGM, les données sont écrites dans trois images .pgm (L, a, b).
- * \details Les images .pgm sont nommées en ajoutant "_L", "_A" et "_B" au nom du fichier.
+ * \details Si le format de l'image est PGM, les données sont écrites dans une seule image .pgm
+ * \details Les images .pgm sont nommées en ajoutant "_L", "_A" et "_B" au nom du fichier pour chaque composantes correspondante.
  */
 void Image::write(const std::string &filename) {
     if (format == PGM) {
@@ -223,21 +223,37 @@ Image Image::RGBtoLAB() {
 
 /**
  * \brief Applique l'algorithme SLICC sur l'image.
- * \param k Nombre de clusters.
+ * \param k Nombre de clusters -> plus l'image est grande, plus on augmente.
  * \param m Paramètre de compacité.
+ * \param N Nombre de superpixels souhaité -> plus l'image est grande, plus on augmente.
  */
-void Image::SLICC(int k, int m) {
+void Image::SLICC(int k, int m, int N) {
 
     // PHASE 1 : Initialisation
-    //1.1 Convertir l’image RGB en CIELab.
-    //1.2 Définir le nombre de superpixels souhaité et calculer le pas de grille \( S = \sqrt{\frac{N}{K}} \).
+    //1.1 Convertir l’image RGB en CIELab. -> ok
+    //1.2 Définir le nombre de superpixels souhaité et calculer le pas de grille avec S = sqrt(N / k).
+    float S = sqrt(static_cast<float>(N) / k);
+
+
     //1.3 Placer les centres de clusters Ck sur une grille régulière (avec un léger ajustement pour éviter les bords).
+    vector<ClusterCenter> clusters(k);
+    //pour chaque cluster, on prend un pixel de l'image comme centre
+    for (int clusterActuel = 0; clusterActuel < k; clusterActuel++) {
+        int x = static_cast<int>((S / 2) + (i % static_cast<int>(width / S)) * S);
+        int y = static_cast<int>((S / 2) + (i / static_cast<int>(width / S)) * S);
+        clusters[clusterActuel].xk = x;
+        clusters[clusterActuel].yk = y;
+        clusters[clusterActuel].Lk = data[(y * width + x) * 3];
+        clusters[clusterActuel].ak = data[(y * width + x) * 3 + 1];
+        clusters[clusterActuel].bk = data[(y * width + x) * 3 + 2];
+    }
+
     //1.4 Initialiser la matrice des labels  L(x, y) à -1 et la matrice des distances   D(x, y) à INF
+    vector<int> labels(size, -1);
+    vector<float> distances(size, INFINITY);
 
-
-    //1.1 Convertir l’image RGB en CIELab.
-
-
+    //1.5 Initialiser le seuil de convergence ΔCk
+    float seuil = 1.0;
 
     // PHASE 2 : Assignation des pixels aux clusters
     //2.1 Pour chaque centre de cluster \( C_k \) :

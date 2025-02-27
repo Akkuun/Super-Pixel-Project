@@ -1,0 +1,8 @@
+Méthode SLICO (SCLIC sans paramètre : https://www.epfl.ch/labs/ivrl/research/slic-superpixels/#SLICO  )
+
+
+
+Graal du SLIC : http://vision.gel.ulaval.ca/~jflalonde/cours/4105/h17/tps/results/projet/111063028/index.html
+
+
+lien bases de données d'images : https://unsplash.com/fr/s/photos/reptile

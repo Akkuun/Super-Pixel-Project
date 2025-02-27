@@ -1,0 +1,16 @@
+
+
+27/02
+
+DANS ALGO SLICC - déroulé du travail 
+
+1) études documentaires + trouvage de nouvelles technique qui ne demande pas de paramètre SLICO
+
+2) mise en place de la base de code -> class image propre
+
+
+2.5 ) choix de SLICC et non SLIC car elle utilise le même principe tout en ajoutant des contrôles supplémentaire et afin de comparer 2 techniques, je préfère traité la méthode optimale de la famille slicc à une autre.
+
+3) début code 
+
+tranformation de l'image en format RGB en format CIELAB.
