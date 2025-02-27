@@ -4,17 +4,18 @@
 using namespace std;
 
 void SLICC(int argc, char *argv[]) {
-    if (argc != 4) {
-        cout << "Usage: " << argv[0] << " NomImageIn.pgm NomImageOut.pgm Seuil" << endl;
+    if (argc != 3) {
+        cout << "Usage: " << argv[0] << " NomImageIn.ppm NomImageOut.ppm " << endl;
         exit(1);
     }
 
     string inputFilename = argv[1];
     string outputFilename = argv[2];
-    int threshold = stoi(argv[3]);
 
-    Image img(inputFilename, Image::PGM);
+    Image img(inputFilename, Image::PPM);
     img.read();
-    img.SLICC(2,2);
-    img.write(outputFilename);
+    Image imgLAB = img.RGBtoLAB();
+    imgLAB.write(outputFilename);
+//    imgLAB.SLICC(2,2);
+//    img.write(outputFilename);
 }

@@ -6,7 +6,7 @@
 
 class Image {
 public:
-    enum Format { PGM, PPM };
+    enum Format { PGM, PPM , LAB};
 
     Image(const std::string &filename, Format format);
     ~Image();
@@ -19,7 +19,7 @@ public:
     //fonctions de traitement
     void appliquerSeuil(int seuil);
     void SLICC(int k, int m);
-
+    Image RGBtoLAB();
 
 private:
     std::string filename;

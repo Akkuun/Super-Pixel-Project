@@ -1,4 +1,4 @@
-#include "FonctionsImages.h"
+#include "main.h"
 
 int main(int argc, char* argv[]) {
     SLICC(argc, argv);

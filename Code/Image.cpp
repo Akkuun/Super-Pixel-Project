@@ -2,7 +2,7 @@
 #include "image_ppm.h"
 #include <iostream>
 #include <vector>
-
+#include <cstring>
 
 using namespace std;
 /**
@@ -53,6 +53,7 @@ void Image::read() {
         size = width * height * 3;
         allocation_tableau(data, OCTET, size);
         lire_image_ppm(const_cast<char *>(filename.c_str()), data, size);
+
     }
 }
 
@@ -81,6 +82,20 @@ void Image::appliquerSeuil(int seuil) {
         }
     }
 }
+
+Image Image::RGBtoLAB() {
+    //pour l'instant retourne une copie de l'image
+    Image img(filename, format);
+    img.width = width;
+    img.height = height;
+    img.size = size;
+    img.data = (OCTET *) malloc(size * sizeof(OCTET));
+    memcpy(img.data, data, size * sizeof(OCTET));
+    return img;
+
+}
+
+
 
 /**
  * \brief Applique l'algorithme SLICC sur l'image.

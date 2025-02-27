@@ -58,11 +58,12 @@ void lire_image_ppm(char nom_image[], OCTET *pt_image, int taille_image) {
         ignorer_commentaires(f_image);
         fscanf(f_image, "%d %d %d%*c", &nb_colonnes, &nb_lignes, &max_grey_val);
 
+        taille_image = 3 * nb_colonnes * nb_lignes; // Ensure taille_image is correctly calculated
+
         if ((fread((OCTET*)pt_image, sizeof(OCTET), taille_image, f_image)) != (size_t)(taille_image)) {
             printf("\nErreur de lecture de l'image %s \n", nom_image);
             exit(EXIT_FAILURE);
         }
-        fclose(f_image);
     }
 }
 
