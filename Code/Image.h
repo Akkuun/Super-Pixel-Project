@@ -3,6 +3,17 @@
 
 #include <string>
 #include "image_ppm.h"
+#include <iostream>
+#include <vector>
+#include <cstring>
+#include <cmath>
+
+using namespace std;
+
+struct ClusterCenter {
+    float Lk, ak, bk;
+    int xk, yk;
+};
 
 class Image {
 public:
@@ -19,10 +30,16 @@ public:
     OCTET* copyData() const;
     OCTET *copyData(const OCTET *data, int size);
     OCTET* createData();
+    int getIndice(int i,int j,int nH,int nW);
+
     //fonctions de traitement
     void appliquerSeuil(int seuil);
-    void SLICC(int k, int m, int N);
+    void SLICC(int &k, int &m, int &N);
     Image RGBtoLAB();
+    float calculerDistanceCouleur(ClusterCenter &cluster ,int &i,int &j);
+    float calculerDistanceSpatiale(ClusterCenter &cluster, int &i, int &j);
+    void calculerNouveauCentre(vector<ClusterCenter> &clusters, vector<int> &labels, int cluster, float &newL, float &newa,
+                               float &newb, float &newx, float &newy, float &newDeltaCk);
 
 private:
     std::string filename;

@@ -6,20 +6,7 @@
 #include <cmath>
 
 using namespace std;
-/**
- * \brief Structure représentant un cluster.
- * \details Un cluster est défini par un centre (Lk, ak, bk) et une position (xk, yk).
- * \details Cette structure est utilisée pour l'algorithme SLIC.
- * \param Lk Composante L du centre du cluster.
- * \param ak Composante a du centre du cluster.
- * \param bk Composante b du centre du cluster.
- * \param xk Position x du centre du cluster.
- * \param yk Position y du centre du cluster.
- */
-struct ClusterCenter {
-    float Lk, ak, bk;
-    int xk, yk;
-};
+
 
 /**
  * \brief Constructeur de la classe Image.
@@ -95,6 +82,20 @@ void Image::write(const std::string &filename) {
     }
 }
 
+/**
+ * \brief Calcule l'indice d'un pixel dans un tableau 1D.
+ * \param i Coordonnée y du pixel.
+ * \param j Coordonnée x du pixel.
+ * \param nH Hauteur de l'image.
+ * \param nW Largeur de l'image.
+ * \return L'indice du pixel dans le tableau 1D.
+ */
+int Image::getIndice(int i, int j, int nH, int nW) {
+    i = std::min(std::max(i, 0), nH - 1);
+    j = std::min(std::max(j, 0), nW - 1);
+    return i * nW + j;
+}
+
 void Image::appliquerSeuil(int seuil) {
     if (format == PGM) {
         for (int i = 0; i < size; i++) {
@@ -160,7 +161,7 @@ Image Image::RGBtoLAB() {
     cout << "Début Conversion RGB -> CIELab" << endl;
 
     // PHASE 1 : Conversion RGB → XYZ
-    float* dataXYZ = new float[size];
+    float *dataXYZ = new float[size];
 
     //1.1 Normaliser chaque canal RGB dans [0,1].
     for (int i = 0; i < size; i += 3) {
@@ -174,13 +175,13 @@ Image Image::RGBtoLAB() {
         B = (B > 0.04045) ? pow((B + 0.055) / 1.055, 2.4) : B / 12.92;
 
         //1.3 Conversion RGB -> XYZ
-        dataXYZ[i]     = 0.4124564 * R + 0.3575761 * G + 0.1804375 * B;
+        dataXYZ[i] = 0.4124564 * R + 0.3575761 * G + 0.1804375 * B;
         dataXYZ[i + 1] = 0.2126729 * R + 0.7151522 * G + 0.0721750 * B;
         dataXYZ[i + 2] = 0.0193339 * R + 0.1191920 * G + 0.9503041 * B;
     }
 
     // PHASE 2 : Conversion XYZ → CIELab
-    OCTET* dataLAB = createData();
+    OCTET *dataLAB = createData();
 
     for (int i = 0; i < size; i += 3) {
         // 2.1 Normalisation par les valeurs de référence (D65)
@@ -199,7 +200,7 @@ Image Image::RGBtoLAB() {
         float b = 200.0 * (Y - Z);
 
         // 2.4 Conversion en OCTET (valeurs entières)
-        dataLAB[i]     = static_cast<OCTET>(L * (255.0 / 100.0));  // Normalisation de [0,100] à [0,255]
+        dataLAB[i] = static_cast<OCTET>(L * (255.0 / 100.0));  // Normalisation de [0,100] à [0,255]
         dataLAB[i + 1] = static_cast<OCTET>(a + 128);              // Normalisation de [-128,127] à [0,255]
         dataLAB[i + 2] = static_cast<OCTET>(b + 128);
     }
@@ -220,27 +221,92 @@ Image Image::RGBtoLAB() {
     return img;
 }
 
+/**
+ * \brief Calcule la distance entre un pixel et un cluster.
+ * \details La distance est donnée par la formule : d_lab = ||C_k^{lab} - P^{lab} ||
+ * \param cluster Centre du cluster.
+ * \param i Coordonnée x du pixel.
+ * \param j Coordonnée y du pixel.
+ * \return La distance entre le pixel et le cluster.
+ */
+float Image::calculerDistanceCouleur(ClusterCenter &cluster, int &i, int &j) {
+    // Calcul de la distance couleur
+    float dL = cluster.Lk - data[getIndice(j, i, height, width) * 3];
+    float da = cluster.ak - data[getIndice(j, i, height, width) * 3 + 1];
+    float db = cluster.bk - data[getIndice(j, i, height, width) * 3 + 2];
+    return sqrt(dL * dL + da * da + db * db);
+}
 
+/**
+ * \brief Calcule la distance spatiale entre un pixel et un cluster.
+ * \details La distance est donnée par la formule : d_xy = ||(x_k, y_k) - (x, y)||
+ * \param cluster Centre du cluster.
+ * \param i Coordonnée x du pixel.
+ * \param j Coordonnée y du pixel.
+ * \return La distance spatiale entre le pixel et le cluster.
+ */
+float Image::calculerDistanceSpatiale(ClusterCenter &cluster, int &i, int &j) {
+    // Calcul de la distance spatiale
+    float dx = cluster.xk - i;
+    float dy = cluster.yk - j;
+    return sqrt(dx * dx + dy * dy);
+}
+/**
+ * \brief Calcule le nouveau centre d'un cluster.
+ * \details Le nouveau centre est la moyenne des pixels lui appartenant (qui ont le même label).
+ * \param clusters Liste des clusters.
+ * \param labels Liste des labels des pixels.
+ * \param newL Nouvelle composante L du centre.
+ * \param newa Nouvelle composante a du centre.
+ * \param newb Nouvelle composante b du centre.
+ * \param newx Nouvelle position x du centre.
+ * \param newy Nouvelle position y du centre.
+ * \param newDeltaCk Nouveau deltaCk.
+ */
+void Image::calculerNouveauCentre(vector<ClusterCenter> &clusters, vector<int> &labels, int cluster, float &newL, float &newa,
+                                  float &newb, float &newx, float &newy, float &newDeltaCk) {
+    float sumL = 0, suma = 0, sumb = 0, sumx = 0, sumy = 0;
+    int nbPixels = 0;
+    for (int i = 0; i < size / 3; i++) {
+        if (labels[i] == cluster) {
+            sumL += data[i * 3];
+            suma += data[i * 3 + 1];
+            sumb += data[i * 3 + 2];
+            sumx += i % width;
+            sumy += i / width;
+            nbPixels++;
+        }
+    }
+    if (nbPixels == 0) return;
+
+    newL = sumL / nbPixels;
+    newa = suma / nbPixels;
+    newb = sumb / nbPixels;
+    newx = sumx / nbPixels;
+    newy = sumy / nbPixels;
+    newDeltaCk = sqrt((newL - clusters[cluster].Lk) * (newL - clusters[cluster].Lk) +
+                      (newa - clusters[cluster].ak) * (newa - clusters[cluster].ak) +
+                      (newb - clusters[cluster].bk) * (newb - clusters[cluster].bk) +
+                      (newx - clusters[cluster].xk) * (newx - clusters[cluster].xk) +
+                      (newy - clusters[cluster].yk) * (newy - clusters[cluster].yk));
+}
 /**
  * \brief Applique l'algorithme SLICC sur l'image.
  * \param k Nombre de clusters -> plus l'image est grande, plus on augmente.
  * \param m Paramètre de compacité.
  * \param N Nombre de superpixels souhaité -> plus l'image est grande, plus on augmente.
  */
-void Image::SLICC(int k, int m, int N) {
-
+void Image::SLICC(int &k, int &m, int &N) {
     // PHASE 1 : Initialisation
     //1.1 Convertir l’image RGB en CIELab. -> ok
     //1.2 Définir le nombre de superpixels souhaité et calculer le pas de grille avec S = sqrt(N / k).
     float S = sqrt(static_cast<float>(N) / k);
 
-
     //1.3 Placer les centres de clusters Ck sur une grille régulière (avec un léger ajustement pour éviter les bords).
     vector<ClusterCenter> clusters(k);
-    //pour chaque cluster, on prend un pixel de l'image comme centre
     for (int clusterActuel = 0; clusterActuel < k; clusterActuel++) {
-        int x = static_cast<int>((S / 2) + (i % static_cast<int>(width / S)) * S);
-        int y = static_cast<int>((S / 2) + (i / static_cast<int>(width / S)) * S);
+        int x = static_cast<int>((S / 2) + (clusterActuel % static_cast<int>(width / S)) * S);
+        int y = static_cast<int>((S / 2) + (clusterActuel / static_cast<int>(width / S)) * S);
         clusters[clusterActuel].xk = x;
         clusters[clusterActuel].yk = y;
         clusters[clusterActuel].Lk = data[(y * width + x) * 3];
@@ -249,34 +315,60 @@ void Image::SLICC(int k, int m, int N) {
     }
 
     //1.4 Initialiser la matrice des labels  L(x, y) à -1 et la matrice des distances   D(x, y) à INF
-    vector<int> labels(size, -1);
-    vector<float> distances(size, INFINITY);
+    vector<int> labels(size / 3, -1);
+    vector<float> distances(size / 3, INFINITY);
 
     //1.5 Initialiser le seuil de convergence ΔCk
     float seuil = 1.0;
+    float deltaCk = INFINITY;
 
-    // PHASE 2 : Assignation des pixels aux clusters
-    //2.1 Pour chaque centre de cluster \( C_k \) :
-    //2.2 Parcourir les pixels dans une fenêtre locale de taille \( 2S \times 2S \).
-    //2.3 Pour chaque pixel \( P(x, y) \) dans cette région :
-    //- Calculer la **distance couleur** \( d_{lab} = || C_k^{lab} - P^{lab} || \).
-    //- Calculer la **distance spatiale** \( d_{xy} = || C_k^{xy} - P^{xy} || \).
-    //- Calculer la distance totale :
-    //D = d_{lab} + \frac{m}{S} \cdot d_{xy}
+    //3.2 Répéter **PHASE 2 et 3** jusqu'à convergence (ΔCk < seuil)
+    while (deltaCk > seuil) {
+        deltaCk = 0;
+        //2.1 Pour chaque centre de cluster C_k
+        for (int cluster = 0; cluster < k; cluster++) {
+            //2.2 Pour chaque pixel P(x, y) dans une fenêtre 2S x 2S autour de C_k
+            for (int dx = -S; dx <= S; dx++) {
+                for (int dy = -S; dy <= S; dy++) {
+                    //2.3 Calculer la distance D(P, C_k) entre le pixel P et le centre C_k
+                    int x = clusters[cluster].xk + dx;
+                    int y = clusters[cluster].yk + dy;
 
-    //- Si \( D < D(x, y) \), mettre à jour \( D(x, y) \) et assigner \( L(x, y) = k \).
+                    if (x >= 0 && x < width && y >= 0 && y < height) {
+                        int index = getIndice(y, x, height, width);
+                        float d_lab = calculerDistanceCouleur(clusters[cluster], x, y);
+                        float d_xy = calculerDistanceSpatiale(clusters[cluster], x, y);
+                        float D = d_lab + (m / S) * d_xy;
 
-    // PHASE 3 : Mise à jour des centres des superpixels
-    //3.1 Pour chaque cluster \( C_k \) :
-    //- Calculer le **nouveau centre** comme la moyenne des pixels lui appartenant.
-    //3.2 Répéter **PHASE 2 et 3** jusqu'à convergence (ΔCk < seuil).
+                        if (D < distances[index]) {
+                            distances[index] = D;
+                            labels[index] = cluster;
+                        }
+                    }
+                }
+            }
+        }
+
+        // PHASE 3 : Mise à jour des centres des superpixels
+        for (int cluster = 0; cluster < k; cluster++) {
+            float newL, newa, newb, newx, newy, newDeltaCk;
+            //3.1 Calculer le nouveau centre C_k en moyennant les pixels lui appartenant.
+            calculerNouveauCentre(clusters, labels, cluster, newL, newa, newb, newx, newy, newDeltaCk);
+
+            clusters[cluster].Lk = newL;
+            clusters[cluster].ak = newa;
+            clusters[cluster].bk = newb;
+            clusters[cluster].xk = newx;
+            clusters[cluster].yk = newy;
+            //3.3 Calculer la variation ΔCk du centre C_k
+            deltaCk += newDeltaCk;
+        }
+    }
 
     // PHASE 4 : Correction de la connectivité (SLICC spécifique)
-    //4.1 Parcourir l'image pour détecter les superpixels non connexes :
-    //Effectuer un **flood fill** pour identifier les **composantes connexes** de chaque superpixel.
-    //- Si une composante est **trop petite**, l’assigner au superpixel voisin le plus proche.
-    //4.2 Mettre à jour les labels \( L(x, y) \) après fusion des petits segments.
-
-
-
+    // 4.1 Parcourir l'image pour détecter les superpixels non connexes :
+    // Effectuer un flood fill pour identifier les composantes connexes de chaque superpixel.
+    // - Si une composante est trop petite (moins de 1% de la taille moyenne des superpixels), l'affecter au superpixel voisin le plus proche.
+    // 4.2 Mettre à jour les labels \( L(x, y) \) après fusion des petits segments.
 }
+
