@@ -63,9 +63,9 @@ void Image::read() {
  * \brief Écrit les données de l'image dans un fichier.
  * \param filename Nom du fichier image.
  * \details Les données de l'image sont stockées dans le tableau data.
- * \details Si le format de l'image est PPM, les données sont stockées dans un tableau de taille 3 * size.
- * \details Si le format de l'image est PGM, les données sont stockées dans un tableau de taille size.
- * \details Si le format de l'image est LAB, les données sont stockées dans trois tableaux de taille size afin de dessiner chaque composante plus facilement.
+ * \details Si le format de l'image est PPM, les données sont écrites dans une seule image .ppm
+ * \details Si le format de l'image est PGM, les données sont écrites dans trois images .pgm (L, a, b).
+ * \details Les images .pgm sont nommées en ajoutant "_L", "_A" et "_B" au nom du fichier.
  */
 void Image::write(const std::string &filename) {
     if (format == PGM) {
