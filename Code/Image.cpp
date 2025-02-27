@@ -3,6 +3,7 @@
 #include <iostream>
 #include <vector>
 #include <cstring>
+#include <cmath>
 
 using namespace std;
 /**
@@ -57,15 +58,40 @@ void Image::read() {
     }
 }
 
+
 /**
  * \brief Écrit les données de l'image dans un fichier.
  * \param filename Nom du fichier image.
+ * \details Les données de l'image sont stockées dans le tableau data.
+ * \details Si le format de l'image est PPM, les données sont stockées dans un tableau de taille 3 * size.
+ * \details Si le format de l'image est PGM, les données sont stockées dans un tableau de taille size.
+ * \details Si le format de l'image est LAB, les données sont stockées dans trois tableaux de taille size afin de dessiner chaque composante plus facilement.
  */
 void Image::write(const std::string &filename) {
     if (format == PGM) {
         ecrire_image_pgm(const_cast<char *>(filename.c_str()), data, height, width);
     } else if (format == PPM) {
         ecrire_image_ppm(const_cast<char *>(filename.c_str()), data, height, width);
+    } else if (format == LAB) {
+        OCTET *dataL = copyData();
+        OCTET *dataa = copyData();
+        OCTET *datab = copyData();
+
+        for (int i = 0; i < size; i += 3) {
+            dataL[i / 3] = data[i];       // Extraction des valeurs L
+            dataa[i / 3] = data[i + 1];   // Extraction des valeurs a
+            datab[i / 3] = data[i + 2];   // Extraction des valeurs b
+        }
+
+        ecrire_image_pgm(const_cast<char *>((filename.substr(0, filename.find_last_of('.')) + "_L.pgm").c_str()), dataL,
+                         height, width);
+        ecrire_image_pgm(const_cast<char *>((filename.substr(0, filename.find_last_of('.')) + "_A.pgm").c_str()), dataa,
+                         height, width);
+        ecrire_image_pgm(const_cast<char *>((filename.substr(0, filename.find_last_of('.')) + "_B.pgm").c_str()), datab,
+                         height, width);
+        free(dataL);
+        free(dataa);
+        free(datab);
     }
 }
 
@@ -83,18 +109,116 @@ void Image::appliquerSeuil(int seuil) {
     }
 }
 
+/**
+ * \brief Copie les données de l'image dans un nouveau tableau.
+ * \return Un pointeur vers le nouveau tableau contenant les données copiées.
+ */
+OCTET *Image::copyData() const {
+    OCTET *newData = (OCTET *) malloc(size * sizeof(OCTET));
+    if (newData == nullptr) {
+        std::cerr << "Erreur d'allocation de mémoire pour la copie des données de l'image." << std::endl;
+        exit(EXIT_FAILURE);
+    }
+    memcpy(newData, data, size * sizeof(OCTET));
+    return newData;
+}
+
+/**
+ * \brief Copie les données de l'image dans un nouveau tableau.
+ * \param data Le tableau de données à copier.
+ * \param size La taille du tableau de données.
+ * \return Un pointeur vers le nouveau tableau contenant les données copiées.
+ */
+OCTET *Image::copyData(const OCTET *data, int size) {
+    OCTET *newData = (OCTET *) malloc(size * sizeof(OCTET));
+    if (newData == nullptr) {
+        std::cerr << "Erreur d'allocation de mémoire pour la copie des données de l'image." << std::endl;
+        exit(EXIT_FAILURE);
+    }
+    memcpy(newData, data, size * sizeof(OCTET));
+    return newData;
+}
+
+/**
+ * \brief Crée un nouveau tableau pour stocker les données de l'image.
+ * \return Un pointeur vers le nouveau tableau alloué.
+ */
+OCTET *Image::createData() {
+    OCTET *newData = (OCTET *) malloc(size * sizeof(OCTET));
+    if (newData == nullptr) {
+        std::cerr << "Erreur d'allocation de mémoire pour la copie des données de l'image." << std::endl;
+        exit(EXIT_FAILURE);
+    }
+    return newData;
+}
+
+/**
+ * \brief Convertit l'image RGB en CIELab.
+ * \return Une nouvelle image en format CIELab.
+ */
 Image Image::RGBtoLAB() {
-    //pour l'instant retourne une copie de l'image
-    Image img(filename, format);
+    cout << "Début Conversion RGB -> CIELab" << endl;
+
+    // PHASE 1 : Conversion RGB → XYZ
+    float* dataXYZ = new float[size];
+
+    //1.1 Normaliser chaque canal RGB dans [0,1].
+    for (int i = 0; i < size; i += 3) {
+        float R = data[i] / 255.0;
+        float G = data[i + 1] / 255.0;
+        float B = data[i + 2] / 255.0;
+
+        //1.2 Appliquer la correction gamma inverse (sRGB → Linéaire)
+        R = (R > 0.04045) ? pow((R + 0.055) / 1.055, 2.4) : R / 12.92;
+        G = (G > 0.04045) ? pow((G + 0.055) / 1.055, 2.4) : G / 12.92;
+        B = (B > 0.04045) ? pow((B + 0.055) / 1.055, 2.4) : B / 12.92;
+
+        //1.3 Conversion RGB -> XYZ
+        dataXYZ[i]     = 0.4124564 * R + 0.3575761 * G + 0.1804375 * B;
+        dataXYZ[i + 1] = 0.2126729 * R + 0.7151522 * G + 0.0721750 * B;
+        dataXYZ[i + 2] = 0.0193339 * R + 0.1191920 * G + 0.9503041 * B;
+    }
+
+    // PHASE 2 : Conversion XYZ → CIELab
+    OCTET* dataLAB = createData();
+
+    for (int i = 0; i < size; i += 3) {
+        // 2.1 Normalisation par les valeurs de référence (D65)
+        float X = dataXYZ[i] / 0.95047;
+        float Y = dataXYZ[i + 1];
+        float Z = dataXYZ[i + 2] / 1.08883;
+
+        // 2.2 Transformation non linéaire
+        X = (X > 0.008856) ? pow(X, 1.0 / 3.0) : (7.787 * X) + (16.0 / 116.0);
+        Y = (Y > 0.008856) ? pow(Y, 1.0 / 3.0) : (7.787 * Y) + (16.0 / 116.0);
+        Z = (Z > 0.008856) ? pow(Z, 1.0 / 3.0) : (7.787 * Z) + (16.0 / 116.0);
+
+        // 2.3 Conversion en CIELab
+        float L = (116.0 * Y) - 16.0;
+        float a = 500.0 * (X - Y);
+        float b = 200.0 * (Y - Z);
+
+        // 2.4 Conversion en OCTET (valeurs entières)
+        dataLAB[i]     = static_cast<OCTET>(L * (255.0 / 100.0));  // Normalisation de [0,100] à [0,255]
+        dataLAB[i + 1] = static_cast<OCTET>(a + 128);              // Normalisation de [-128,127] à [0,255]
+        dataLAB[i + 2] = static_cast<OCTET>(b + 128);
+    }
+
+    // Nettoyage mémoire
+    delete[] dataXYZ;
+
+    // PHASE 3 : Stockage des valeurs CIELab dans une nouvelle image
+    Image img(filename, LAB);
     img.width = width;
     img.height = height;
     img.size = size;
-    img.data = (OCTET *) malloc(size * sizeof(OCTET));
-    memcpy(img.data, data, size * sizeof(OCTET));
+    img.data = copyData(dataLAB, size);
+
+    free(dataLAB);
+
+    cout << "Fin Conversion RGB -> CIELab" << endl;
     return img;
-
 }
-
 
 
 /**
