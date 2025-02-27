@@ -1,6 +1,6 @@
 #include "FonctionsImages.h"
 
 int main(int argc, char* argv[]) {
-    SLIC(argc, argv);
+    SLICC(argc, argv);
     return 0;
 }

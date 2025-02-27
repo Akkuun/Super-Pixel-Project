@@ -18,7 +18,8 @@ public:
     OCTET* getData() const { return data; }
     //fonctions de traitement
     void appliquerSeuil(int seuil);
-    void SLIC(int k, int m);
+    void SLICC(int k, int m);
+
 
 private:
     std::string filename;
