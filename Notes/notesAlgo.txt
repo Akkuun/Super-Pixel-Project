@@ -40,3 +40,59 @@ On sépare la lumière des chrominence (couleurs)
 
 
 
+
+
+
+ALGO SLICC  
+
+
+    // PHASE 1 : Initialisation
+    //1.1 Convertir l’image RGB en CIELab. -> ok
+    //1.2 Définir le nombre de superpixels souhaité et calculer le pas de grille \( S = \sqrt{\frac{N}{K}} \).
+
+    
+
+
+
+    //1.3 Placer les centres de clusters Ck sur une grille régulière (avec un léger ajustement pour éviter les bords).
+    //1.4 Initialiser la matrice des labels  L(x, y) à -1 et la matrice des distances   D(x, y) à INF
+
+
+
+
+
+    // PHASE 2 : Assignation des pixels aux clusters
+    //2.1 Pour chaque centre de cluster \( C_k \) :
+    //2.2 Parcourir les pixels dans une fenêtre locale de taille \( 2S \times 2S \).
+    //2.3 Pour chaque pixel \( P(x, y) \) dans cette région :
+    //- Calculer la **distance couleur** \( d_{lab} = || C_k^{lab} - P^{lab} || \).
+    //- Calculer la **distance spatiale** \( d_{xy} = || C_k^{xy} - P^{xy} || \).
+    //- Calculer la distance totale :
+    //D = d_{lab} + \frac{m}{S} \cdot d_{xy}
+
+    //- Si \( D < D(x, y) \), mettre à jour \( D(x, y) \) et assigner \( L(x, y) = k \).
+
+    // PHASE 3 : Mise à jour des centres des superpixels
+    //3.1 Pour chaque cluster \( C_k \) :
+    //- Calculer le **nouveau centre** comme la moyenne des pixels lui appartenant.
+    //3.2 Répéter **PHASE 2 et 3** jusqu'à convergence (ΔCk < seuil).
+
+    // PHASE 4 : Correction de la connectivité (SLICC spécifique)
+    //4.1 Parcourir l'image pour détecter les superpixels non connexes :
+    //Effectuer un **flood fill** pour identifier les **composantes connexes** de chaque superpixel.
+    //- Si une composante est **trop petite**, l’assigner au superpixel voisin le plus proche.
+    //4.2 Mettre à jour les labels \( L(x, y) \) après fusion des petits segments.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
