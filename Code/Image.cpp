@@ -4,6 +4,7 @@
 #include <vector>
 #include <cstring>
 #include <cmath>
+#include <queue>
 
 using namespace std;
 
@@ -251,6 +252,7 @@ float Image::calculerDistanceSpatiale(ClusterCenter &cluster, int &i, int &j) {
     float dy = cluster.yk - j;
     return sqrt(dx * dx + dy * dy);
 }
+
 /**
  * \brief Calcule le nouveau centre d'un cluster.
  * \details Le nouveau centre est la moyenne des pixels lui appartenant (qui ont le même label).
@@ -263,7 +265,8 @@ float Image::calculerDistanceSpatiale(ClusterCenter &cluster, int &i, int &j) {
  * \param newy Nouvelle position y du centre.
  * \param newDeltaCk Nouveau deltaCk.
  */
-void Image::calculerNouveauCentre(vector<ClusterCenter> &clusters, vector<int> &labels, int cluster, float &newL, float &newa,
+void Image::calculerNouveauCentre(vector <ClusterCenter> &clusters, vector<int> &labels, int cluster, float &newL,
+                                  float &newa,
                                   float &newb, float &newx, float &newy, float &newDeltaCk) {
     float sumL = 0, suma = 0, sumb = 0, sumx = 0, sumy = 0;
     int nbPixels = 0;
@@ -290,6 +293,83 @@ void Image::calculerNouveauCentre(vector<ClusterCenter> &clusters, vector<int> &
                       (newx - clusters[cluster].xk) * (newx - clusters[cluster].xk) +
                       (newy - clusters[cluster].yk) * (newy - clusters[cluster].yk));
 }
+
+/**
+ * \brief Applique un floodFill sur le pixel i,j pour identifier les composantes connexes.
+ * @param x la coordonnée x du pixel
+ * @param y la coordonnée y du pixel
+ * @param newLabels la référence de la liste des nouveaux labels pour classer les composantes connexes
+ * @param label la référence du label actuel passé en paramtre de la fonction
+ * @param componentSize la référence de la liste des tailles des composantes connexes
+ * @return
+ */
+int Image::floodFill(int x, int y, vector<int> &newLabels, int &label, vector<int> &labels) {
+    queue <pair<int, int>> q;
+    q.push({x, y});
+    int index = getIndice(x, y, height, width);
+    newLabels[index] = label;
+    int size = 0;
+
+    while (!q.empty()) {
+        auto [cx, cy] = q.front();
+        q.pop();
+        size++;
+
+        for (int dx = -1; dx <= 1; dx++) {
+            for (int dy = -1; dy <= 1; dy++) {
+                int nx = cx + dx;
+                int ny = cy + dy;
+                if (nx >= 0 && nx < height && ny >= 0 && ny < width) {
+                    int nIndex = getIndice(nx, ny, height, width);
+                    if (newLabels[nIndex] == -1 && labels[nIndex] == labels[index]) {
+                        newLabels[nIndex] = label;
+                        q.push({nx, ny});
+                    }
+                }
+            }
+        }
+    }
+
+    return size;
+}
+
+/**
+ * \brief Affecte un superpixel voisin à un pixel si sa composante connexe est trop petite.
+ * @param x la coordonnée x du pixel
+ * @param y la coordonnée y du pixel
+ * @param newLabels la référence de la liste des nouveaux labels pour classer les composantes connexes
+ * @param listeComposantesConnexes la référence de la liste des tailles des composantes connexes
+ * @param labels la référence de la liste des labels des pixels
+ * @param tailleSeuilMinimal la référence de la taille minimale des composantes connexes
+ * @param clusters la référence de la liste des clusters
+ * @return
+ */
+int Image::affecterSuperPixelVoisin(int x, int y, vector<int> &newLabels, vector<int> &listeComposantesConnexes,
+                                    vector<int> &labels, int &tailleSeuilMinimal, vector<ClusterCenter> &clusters) {
+    float minDistance = INFINITY;
+    int bestLabel = -1;
+
+    for (int dx = -1; dx <= 1; dx++) {
+        for (int dy = -1; dy <= 1; dy++) {
+            int nx = x + dx;
+            int ny = y + dy;
+            if (nx >= 0 && nx < height && ny >= 0 && ny < width) {
+                int nIndex = getIndice(nx, ny, height, width);
+                if (newLabels[nIndex] != newLabels[getIndice(x, y, height, width)] &&
+                    listeComposantesConnexes[newLabels[nIndex]] >= tailleSeuilMinimal / 100) {
+                    float distance = calculerDistanceCouleur(clusters[newLabels[nIndex]], x, y);
+                    if (distance < minDistance) {
+                        minDistance = distance;
+                        bestLabel = newLabels[nIndex];
+                    }
+                }
+            }
+        }
+    }
+
+    return bestLabel;
+}
+
 /**
  * \brief Applique l'algorithme SLICC sur l'image.
  * \param k Nombre de clusters -> plus l'image est grande, plus on augmente.
@@ -300,26 +380,32 @@ void Image::SLICC(int &k, int &m, int &N) {
     // PHASE 1 : Initialisation
     //1.1 Convertir l’image RGB en CIELab. -> ok
     //1.2 Définir le nombre de superpixels souhaité et calculer le pas de grille avec S = sqrt(N / k).
+    // N / k donne le nombre total de super pixel présent dans la grille donc on fait sqrt pour récupérer la longueur du carré de S
     float S = sqrt(static_cast<float>(N) / k);
 
     //1.3 Placer les centres de clusters Ck sur une grille régulière (avec un léger ajustement pour éviter les bords).
-    vector<ClusterCenter> clusters(k);
+    vector <ClusterCenter> clusters(k);
     for (int clusterActuel = 0; clusterActuel < k; clusterActuel++) {
+        // x et y sont les coordonnées du centre du cluster au sein de la grille S
+        // on place les centres des clusters sur la grille régulière S et on ajoute un pas de S/2 pour les placer au centre
         int x = static_cast<int>((S / 2) + (clusterActuel % static_cast<int>(width / S)) * S);
         int y = static_cast<int>((S / 2) + (clusterActuel / static_cast<int>(width / S)) * S);
         clusters[clusterActuel].xk = x;
         clusters[clusterActuel].yk = y;
+        // on met dans le cluster les valeurs de couleur du pixel L a b
         clusters[clusterActuel].Lk = data[(y * width + x) * 3];
         clusters[clusterActuel].ak = data[(y * width + x) * 3 + 1];
         clusters[clusterActuel].bk = data[(y * width + x) * 3 + 2];
     }
+    cout << "1.3 done" << endl;
 
-    //1.4 Initialiser la matrice des labels  L(x, y) à -1 et la matrice des distances   D(x, y) à INF
-    vector<int> labels(size / 3, -1);
+    //1.4 Initialiser la matrice des labels (indices des centres)  L(x, y) à -1 et la matrice des distances   D(x, y) à INF
+    // dans notre cas les labels sont les indices des clusters
+    vector<int> labels(size / 3, -1); // /3 car on a 3 valeurs par pixel(L, a, b)
     vector<float> distances(size / 3, INFINITY);
 
     //1.5 Initialiser le seuil de convergence ΔCk
-    float seuil = 1.0;
+    float seuil = 1;
     float deltaCk = INFINITY;
 
     //3.2 Répéter **PHASE 2 et 3** jusqu'à convergence (ΔCk < seuil)
@@ -364,11 +450,61 @@ void Image::SLICC(int &k, int &m, int &N) {
             deltaCk += newDeltaCk;
         }
     }
+    cout << "convergence atteinte" << endl;
 
     // PHASE 4 : Correction de la connectivité (SLICC spécifique)
-    // 4.1 Parcourir l'image pour détecter les superpixels non connexes :
-    // Effectuer un flood fill pour identifier les composantes connexes de chaque superpixel.
-    // - Si une composante est trop petite (moins de 1% de la taille moyenne des superpixels), l'affecter au superpixel voisin le plus proche.
-    // 4.2 Mettre à jour les labels \( L(x, y) \) après fusion des petits segments.
+    vector<int> listeComposantesConnexes(k, 0);
+    vector<int> newLabels(size / 3, -1);
+    int label = 0;
+    cout<<"debut floodfill" << endl;
+// 4.1 Parcourir l'image pour détecter les superpixels non connexes
+    for (int i = 0; i < height; i++) {
+        for (int j = 0; j < width; j++) {
+            int index = getIndice(i, j, height, width);
+            if (newLabels[index] == -1) {
+                // Effectuer un flood fill pour identifier les composantes connexes
+                listeComposantesConnexes[label] = floodFill(i, j, newLabels, label, labels);
+                label++;
+            }
+        }
+    }
+    cout << "debut fision" << endl;
+// 4.2 Fusionner les petits segments
+    int tailleSeuilMinimal = size / (3 * k);
+    for (int i = 0; i < height; i++) {
+        for (int j = 0; j < width; j++) {
+            int index = getIndice(i, j, height, width);
+            // Pour les composantes très petites (< 1% de la taille moyenne des superpixels) on affecte au superpixel voisin le plus proche
+            if (listeComposantesConnexes[newLabels[index]] < tailleSeuilMinimal / 100) {
+                // Affecter au superpixel voisin le plus proche
+
+                int bestLabel = affecterSuperPixelVoisin(i, j, newLabels, listeComposantesConnexes, labels, tailleSeuilMinimal, clusters);
+
+                // si le pixel n'est pas affecté à un superpixel voisin, on le laisse tel quel
+                if (bestLabel != -1) {
+                    newLabels[index] = bestLabel;
+                }
+            }
+        }
+    }
+    cout << "fin fusion" << endl;
+// Mettre à jour les labels
+    labels = newLabels;
+
+
+    // PHASE 5 : Coloration des superpixels
+    //5.1 Colorer les superpixels avec la moyenne des couleurs de leurs pixels.
+
+    for (int i = 0; i < height; i++) {
+        for (int j = 0; j < width; j++) {
+            int index = getIndice(i, j, height, width);
+            int cluster = labels[index];
+            data[index * 3] = clusters[cluster].Lk;
+            data[index * 3 + 1] = clusters[cluster].ak;
+            data[index * 3 + 2] = clusters[cluster].bk;
+        }
+    }
+
+    cout << "Fin SLICC" << endl;
 }
 

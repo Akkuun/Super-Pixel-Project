@@ -40,6 +40,9 @@ public:
     float calculerDistanceSpatiale(ClusterCenter &cluster, int &i, int &j);
     void calculerNouveauCentre(vector<ClusterCenter> &clusters, vector<int> &labels, int cluster, float &newL, float &newa,
                                float &newb, float &newx, float &newy, float &newDeltaCk);
+    int floodFill(int x, int y, vector<int> &newLabels, int &label,vector<int> &labels);
+    int affecterSuperPixelVoisin(int x, int y, vector<int> &newLabels, vector<int> &listeComposantesConnexes, vector<int> &labels,
+                                 int &tailleSeuilMinimal, vector<ClusterCenter> &clusters);
 
 private:
     std::string filename;
