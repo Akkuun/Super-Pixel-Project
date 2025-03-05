@@ -406,11 +406,15 @@ void Image::SLICC(int &k, int &m, int &N) {
 
     //1.5 Initialiser le seuil de convergence ΔCk
     float seuil = 1;
-    float deltaCk = INFINITY;
+    float deltaCk = 0;
+    float lastDeltaCk = INFINITY;
+    int iteration=0;
 
     //3.2 Répéter **PHASE 2 et 3** jusqu'à convergence (ΔCk < seuil)
-    while (deltaCk > seuil) {
+    while (std::abs(lastDeltaCk-deltaCk) > 0.000001) {
+        lastDeltaCk=deltaCk;
         deltaCk = 0;
+        iteration+=1;
         //2.1 Pour chaque centre de cluster C_k
         for (int cluster = 0; cluster < k; cluster++) {
             //2.2 Pour chaque pixel P(x, y) dans une fenêtre 2S x 2S autour de C_k
@@ -449,11 +453,12 @@ void Image::SLICC(int &k, int &m, int &N) {
             //3.3 Calculer la variation ΔCk du centre C_k
             deltaCk += newDeltaCk;
         }
+        cout << "Iteration: " << iteration << ", deltaCk: " << deltaCk << endl;
     }
     cout << "convergence atteinte" << endl;
 
     // PHASE 4 : Correction de la connectivité (SLICC spécifique)
-    vector<int> listeComposantesConnexes(k, 0);
+    vector<int> listeComposantesConnexes;
     vector<int> newLabels(size / 3, -1);
     int label = 0;
     cout<<"debut floodfill" << endl;
@@ -461,9 +466,10 @@ void Image::SLICC(int &k, int &m, int &N) {
     for (int i = 0; i < height; i++) {
         for (int j = 0; j < width; j++) {
             int index = getIndice(i, j, height, width);
+            if (index < 0 || index >= int(newLabels.size())) continue;
             if (newLabels[index] == -1) {
                 // Effectuer un flood fill pour identifier les composantes connexes
-                listeComposantesConnexes[label] = floodFill(i, j, newLabels, label, labels);
+                listeComposantesConnexes.push_back(floodFill(i, j, newLabels, label, labels));
                 label++;
             }
         }
@@ -475,7 +481,7 @@ void Image::SLICC(int &k, int &m, int &N) {
         for (int j = 0; j < width; j++) {
             int index = getIndice(i, j, height, width);
             // Pour les composantes très petites (< 1% de la taille moyenne des superpixels) on affecte au superpixel voisin le plus proche
-            if (listeComposantesConnexes[newLabels[index]] < tailleSeuilMinimal / 100) {
+            if (listeComposantesConnexes[newLabels[index]] < tailleSeuilMinimal ) {
                 // Affecter au superpixel voisin le plus proche
 
                 int bestLabel = affecterSuperPixelVoisin(i, j, newLabels, listeComposantesConnexes, labels, tailleSeuilMinimal, clusters);
