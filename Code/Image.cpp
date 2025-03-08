@@ -232,9 +232,9 @@ Image Image::RGBtoLAB() {
  */
 float Image::calculerDistanceCouleur(ClusterCenter &cluster, int &i, int &j) {
     // Calcul de la distance couleur
-    float dL = cluster.Lk - data[getIndice(j, i, height, width) * 3];
-    float da = cluster.ak - data[getIndice(j, i, height, width) * 3 + 1];
-    float db = cluster.bk - data[getIndice(j, i, height, width) * 3 + 2];
+    float dL = cluster.Lk - data[getIndice(i, j, height, width) * 3];
+    float da = cluster.ak - data[getIndice(i, j, height, width) * 3 + 1];
+    float db = cluster.bk - data[getIndice(i, j, height, width) * 3 + 2];
     return sqrt(dL * dL + da * da + db * db);
 }
 
@@ -324,7 +324,7 @@ int Image::floodFill(int x, int y, vector<int> &newLabels, int &label, vector<in
                     if (newLabels[nIndex] == -1 && labels[nIndex] == labels[index]) {
                         newLabels[nIndex] = label;
                         q.push({nx, ny});
-                    }
+                    }                    
                 }
             }
         }
@@ -355,8 +355,7 @@ int Image::affecterSuperPixelVoisin(int x, int y, vector<int> &newLabels, vector
             int ny = y + dy;
             if (nx >= 0 && nx < height && ny >= 0 && ny < width) {
                 int nIndex = getIndice(nx, ny, height, width);
-                if (newLabels[nIndex] != newLabels[getIndice(x, y, height, width)] &&
-                    listeComposantesConnexes[newLabels[nIndex]] >= tailleSeuilMinimal / 100) {
+                if (newLabels[nIndex] != newLabels[getIndice(x, y, height, width)] ) {
                     float distance = calculerDistanceCouleur(clusters[newLabels[nIndex]], x, y);
                     if (distance < minDistance) {
                         minDistance = distance;
@@ -382,13 +381,28 @@ void Image::SLICC(int &k, int &m, int &N) {
     //1.2 Définir le nombre de superpixels souhaité et calculer le pas de grille avec S = sqrt(N / k).
     // N / k donne le nombre total de super pixel présent dans la grille donc on fait sqrt pour récupérer la longueur du carré de S
     float S = sqrt(static_cast<float>(N) / k);
-
+    cout << "1.3 Begin" << endl;
     //1.3 Placer les centres de clusters Ck sur une grille régulière (avec un léger ajustement pour éviter les bords).
     vector <ClusterCenter> clusters(k);
     for (int clusterActuel = 0; clusterActuel < k; clusterActuel++) {
         // x et y sont les coordonnées du centre du cluster au sein de la grille S
         // on place les centres des clusters sur la grille régulière S et on ajoute un pas de S/2 pour les placer au centre
-        int x = static_cast<int>((S / 2) + (clusterActuel % static_cast<int>(width / S)) * S);
+        // int numClustersY = round(width / S);
+        // int numClustersX = round(height / S);
+
+        // int clusterX = clusterActuel % numClustersX;  // Position en X du cluster
+        // int clusterY = clusterActuel / numClustersX;  // Position en Y du cluster
+
+        // if (clusterY >= numClustersY) break; // Évite d’accéder à un cluster hors image
+
+        // int x = clusterX * S + S / 2;
+        // int y = clusterY * S + S / 2;
+
+        // if (x >= width) x = width - 1;
+        // if (y >= height) y = height - 1;
+
+
+        int x = static_cast<int>((S / 2) + (clusterActuel % static_cast<int>(height / S)) * S);
         int y = static_cast<int>((S / 2) + (clusterActuel / static_cast<int>(width / S)) * S);
         clusters[clusterActuel].xk = x;
         clusters[clusterActuel].yk = y;
@@ -466,7 +480,7 @@ void Image::SLICC(int &k, int &m, int &N) {
     for (int i = 0; i < height; i++) {
         for (int j = 0; j < width; j++) {
             int index = getIndice(i, j, height, width);
-            if (index < 0 || index >= int(newLabels.size())) continue;
+            //cout << labels[getIndice(i, j, height, width)] << " ";
             if (newLabels[index] == -1) {
                 // Effectuer un flood fill pour identifier les composantes connexes
                 listeComposantesConnexes.push_back(floodFill(i, j, newLabels, label, labels));
@@ -474,14 +488,14 @@ void Image::SLICC(int &k, int &m, int &N) {
             }
         }
     }
-    cout << "debut fision" << endl;
+    cout << "debut fusion" << endl;
 // 4.2 Fusionner les petits segments
     int tailleSeuilMinimal = size / (3 * k);
     for (int i = 0; i < height; i++) {
         for (int j = 0; j < width; j++) {
             int index = getIndice(i, j, height, width);
             // Pour les composantes très petites (< 1% de la taille moyenne des superpixels) on affecte au superpixel voisin le plus proche
-            if (listeComposantesConnexes[newLabels[index]] < tailleSeuilMinimal ) {
+            //if (listeComposantesConnexes[newLabels[index]] < tailleSeuilMinimal/100) {
                 // Affecter au superpixel voisin le plus proche
 
                 int bestLabel = affecterSuperPixelVoisin(i, j, newLabels, listeComposantesConnexes, labels, tailleSeuilMinimal, clusters);
@@ -490,7 +504,7 @@ void Image::SLICC(int &k, int &m, int &N) {
                 if (bestLabel != -1) {
                     newLabels[index] = bestLabel;
                 }
-            }
+            //}
         }
     }
     cout << "fin fusion" << endl;
@@ -500,7 +514,6 @@ void Image::SLICC(int &k, int &m, int &N) {
 
     // PHASE 5 : Coloration des superpixels
     //5.1 Colorer les superpixels avec la moyenne des couleurs de leurs pixels.
-
     for (int i = 0; i < height; i++) {
         for (int j = 0; j < width; j++) {
             int index = getIndice(i, j, height, width);

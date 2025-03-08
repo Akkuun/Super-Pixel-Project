@@ -16,9 +16,9 @@ void SLICC(int argc, char *argv[]) {
     img.read();
     Image imgLAB = img.RGBtoLAB();
     imgLAB.write(outputFilename);
-    int k = 100;
-    int m = 10;
-    int N = 1000;
+    int k = 5000;
+    int m = 20;
+    int N = img.getSize();
     imgLAB.SLICC(k, m, N);
     imgLAB.write(outputFilename);
 }

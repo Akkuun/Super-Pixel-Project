@@ -26,6 +26,7 @@ public:
     void write(const std::string &filename);
     int getWidth() const { return width; }
     int getHeight() const { return height; }
+    int getSize() const { return width*height; }
     OCTET* getData() const { return data; }
     OCTET* copyData() const;
     OCTET *copyData(const OCTET *data, int size);
