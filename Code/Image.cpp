@@ -232,13 +232,8 @@ Image Image::LABtoRGB() {
     //1.1 Normaliser chaque canal LAB dans [0,1].
     for (int i = 0; i < size; i += 3) {
         float L = (data[i] / 255.0) * 100.0;  // Convertir L de [0,255] à [0,100]
-        float A = ((data[i + 1] - 128.0) / 128.0) * 127.0;  // Remapper de [0,255] à [-128,127]
-        float B = ((data[i + 2] - 128.0) / 128.0) * 127.0;  // Remapper de [0,255] à [-128,127]
-
-        //1.2 Appliquer la correction gamma inverse (sRGB → Linéaire)
-        // R = (R > 0.04045) ? pow((R + 0.055) / 1.055, 2.4) : R / 12.92;
-        // G = (G > 0.04045) ? pow((G + 0.055) / 1.055, 2.4) : G / 12.92;
-        // B = (B > 0.04045) ? pow((B + 0.055) / 1.055, 2.4) : B / 12.92;
+        float A = ((data[i + 1] - 128.0) / 128.0) * 127.0;  // Convertir A de [0,255] à [-128,127]
+        float B = ((data[i + 2] - 128.0) / 128.0) * 127.0;  // Convertir B de [0,255] à [-128,127]
 
         //1.2 Conversion LAB -> XYZ
         float fy = (L + 16.0) / 116.0;
