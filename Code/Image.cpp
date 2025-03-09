@@ -222,6 +222,81 @@ Image Image::RGBtoLAB() {
     return img;
 }
 
+
+Image Image::LABtoRGB() {
+    cout << "Début Conversion CIELab -> RGB" << endl;
+
+    // PHASE 1 : Conversion CIELab → XYZ
+    float *dataXYZ = new float[size];
+
+    //1.1 Normaliser chaque canal LAB dans [0,1].
+    for (int i = 0; i < size; i += 3) {
+        float L = (data[i] / 255.0) * 100.0;  // Convertir L de [0,255] à [0,100]
+        float A = ((data[i + 1] - 128.0) / 128.0) * 127.0;  // Remapper de [0,255] à [-128,127]
+        float B = ((data[i + 2] - 128.0) / 128.0) * 127.0;  // Remapper de [0,255] à [-128,127]
+
+        //1.2 Appliquer la correction gamma inverse (sRGB → Linéaire)
+        // R = (R > 0.04045) ? pow((R + 0.055) / 1.055, 2.4) : R / 12.92;
+        // G = (G > 0.04045) ? pow((G + 0.055) / 1.055, 2.4) : G / 12.92;
+        // B = (B > 0.04045) ? pow((B + 0.055) / 1.055, 2.4) : B / 12.92;
+
+        //1.2 Conversion LAB -> XYZ
+        float fy = (L + 16.0) / 116.0;
+        float fx = fy + (A / 500.0);
+        float fz = fy - (B / 200.0);
+
+        dataXYZ[i] = 95.047 * ((fx > 0.206893) ? pow(fx, 3) : (fx - 16.0 / 116.0) / 7.787);
+        dataXYZ[i + 1] = 100.000 * ((fy > 0.206893) ? pow(fy, 3) : (fy - 16.0 / 116.0) / 7.787);
+        dataXYZ[i + 2] = 108.883 * ((fz > 0.206893) ? pow(fz, 3) : (fz - 16.0 / 116.0) / 7.787);
+    }
+
+    // PHASE 2 : Conversion XYZ → RGB
+    OCTET *dataRGB = createData();
+
+    for (int i = 0; i < size; i += 3) {
+
+        float X = dataXYZ[i];
+        float Y = dataXYZ[i + 1];
+        float Z = dataXYZ[i + 2];
+
+        // 2.1 Conversion XYZ vers linéaire RGB (sRGB)
+        double R =  3.2406 * (X / 100.0) - 1.5372 * (Y / 100.0) - 0.4986 * (Z / 100.0);
+        double G = -0.9689 * (X / 100.0) + 1.8758 * (Y / 100.0) + 0.0415 * (Z / 100.0);
+        double B =  0.0557 * (X / 100.0) - 0.2040 * (Y / 100.0) + 1.0570 * (Z / 100.0);
+
+        // 2.2 Appliquer la correction gamma
+        R = (R <= 0.0031308) ? (12.92 * R) : (1.055 * pow(R, 1.0 / 2.4) - 0.055);
+        G = (G <= 0.0031308) ? (12.92 * G) : (1.055 * pow(G, 1.0 / 2.4) - 0.055);
+        B = (B <= 0.0031308) ? (12.92 * B) : (1.055 * pow(B, 1.0 / 2.4) - 0.055);
+
+        // 2.3 On clamp les résultats afin d'éviter d'avoir des artéfacts
+        R = std::max(0.0, std::min(1.0, R));
+        G = std::max(0.0, std::min(1.0, G));
+        B = std::max(0.0, std::min(1.0, B));
+
+        // 2.4 Mise à l'échelle [0,255]
+        dataRGB[i] = static_cast<OCTET>(R * 255.0);
+        dataRGB[i + 1] = static_cast<OCTET>(G * 255.0);
+        dataRGB[i + 2] = static_cast<OCTET>(B * 255.0);
+    }
+
+    // Nettoyage mémoire
+    delete[] dataXYZ;
+
+    // PHASE 3 : Stockage des valeurs RGB dans une nouvelle image
+    Image img(filename, PPM);
+    img.width = width;
+    img.height = height;
+    img.size = size;
+    img.data = copyData(dataRGB, size);
+
+    free(dataRGB);
+
+    cout << "Fin Conversion CIELab -> RGB" << endl;
+    return img;
+}
+
+
 /**
  * \brief Calcule la distance entre un pixel et un cluster.
  * \details La distance est donnée par la formule : d_lab = ||C_k^{lab} - P^{lab} ||
@@ -373,7 +448,7 @@ int Image::affecterSuperPixelVoisin(int x, int y, vector<int> &newLabels, vector
  * \brief Applique l'algorithme SLICC sur l'image.
  * \param k Nombre de clusters -> plus l'image est grande, plus on augmente.
  * \param m Paramètre de compacité.
- * \param N Nombre de superpixels souhaité -> plus l'image est grande, plus on augmente.
+ * \param N Nombre de pixels de l'image.
  */
 void Image::SLICC(int &k, int &m, int &N) {
     // PHASE 1 : Initialisation
@@ -387,20 +462,6 @@ void Image::SLICC(int &k, int &m, int &N) {
     for (int clusterActuel = 0; clusterActuel < k; clusterActuel++) {
         // x et y sont les coordonnées du centre du cluster au sein de la grille S
         // on place les centres des clusters sur la grille régulière S et on ajoute un pas de S/2 pour les placer au centre
-        // int numClustersY = round(width / S);
-        // int numClustersX = round(height / S);
-
-        // int clusterX = clusterActuel % numClustersX;  // Position en X du cluster
-        // int clusterY = clusterActuel / numClustersX;  // Position en Y du cluster
-
-        // if (clusterY >= numClustersY) break; // Évite d’accéder à un cluster hors image
-
-        // int x = clusterX * S + S / 2;
-        // int y = clusterY * S + S / 2;
-
-        // if (x >= width) x = width - 1;
-        // if (y >= height) y = height - 1;
-
 
         int x = static_cast<int>((S / 2) + (clusterActuel % static_cast<int>(height / S)) * S);
         int y = static_cast<int>((S / 2) + (clusterActuel / static_cast<int>(width / S)) * S);
@@ -419,13 +480,13 @@ void Image::SLICC(int &k, int &m, int &N) {
     vector<float> distances(size / 3, INFINITY);
 
     //1.5 Initialiser le seuil de convergence ΔCk
-    float seuil = 1;
+    float seuil = 0.00001;
     float deltaCk = 0;
     float lastDeltaCk = INFINITY;
     int iteration=0;
 
     //3.2 Répéter **PHASE 2 et 3** jusqu'à convergence (ΔCk < seuil)
-    while (std::abs(lastDeltaCk-deltaCk) > 0.000001) {
+    while (std::abs(lastDeltaCk-deltaCk) > seuil) {
         lastDeltaCk=deltaCk;
         deltaCk = 0;
         iteration+=1;
@@ -480,7 +541,6 @@ void Image::SLICC(int &k, int &m, int &N) {
     for (int i = 0; i < height; i++) {
         for (int j = 0; j < width; j++) {
             int index = getIndice(i, j, height, width);
-            //cout << labels[getIndice(i, j, height, width)] << " ";
             if (newLabels[index] == -1) {
                 // Effectuer un flood fill pour identifier les composantes connexes
                 listeComposantesConnexes.push_back(floodFill(i, j, newLabels, label, labels));

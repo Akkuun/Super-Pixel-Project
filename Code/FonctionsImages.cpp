@@ -20,5 +20,7 @@ void SLICC(int argc, char *argv[]) {
     int m = 20;
     int N = img.getSize();
     imgLAB.SLICC(k, m, N);
-    imgLAB.write(outputFilename);
+    //imgLAB.write(outputFilename);
+    Image imgOUT=imgLAB.LABtoRGB();
+    imgOUT.write(outputFilename);    
 }
