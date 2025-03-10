@@ -12,7 +12,7 @@ using namespace std;
 
 struct ClusterCenter {
     float Lk, ak, bk;
-    int xk, yk;
+    unsigned long int xk, yk;
 };
 
 class Image {

@@ -587,6 +587,6 @@ void Image::SLICC(int &k, int &m, int &N) {
  * \param Image1 : Image d'origine sans traitements appliqués
  * \param Image2 : Image d'origine avec traitements appliqués
  */
-void Image::PSNR(Image image1, Image image2){
+void Image::PSNR(Image &image1, Image &image2){
 
 }
