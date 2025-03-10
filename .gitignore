@@ -1,0 +1,30 @@
+# Exclure les dossiers d'IDE
+.vscode/
+.idea/
+*.sublime-workspace
+*.sublime-project
+*.code-workspace
+
+# Exclure les fichiers générés par les IDE
+*.iml
+*.swp
+
+# Exclure le dossier imageSorties
+imageSorties/
+
+# Exclure les fichiers de compilation et binaires
+*.o
+*.obj
+*.exe
+*.out
+*.dll
+*.so
+*.a
+*.lib
+
+# Exclure les fichiers temporaires et logs
+*.log
+*.tmp
+*.cache
+*.DS_Store
+Thumbs.db

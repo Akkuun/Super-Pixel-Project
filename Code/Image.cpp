@@ -582,3 +582,11 @@ void Image::SLICC(int &k, int &m, int &N) {
     cout << "Fin SLICC" << endl;
 }
 
+/**
+ * \brief Calculer le PSNR entre 2 images
+ * \param Image1 : Image d'origine sans traitements appliqués
+ * \param Image2 : Image d'origine avec traitements appliqués
+ */
+void Image::PSNR(Image image1, Image image2){
+
+}
