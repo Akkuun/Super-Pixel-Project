@@ -569,6 +569,7 @@ void Image::SLICC(int &k, int &m, int &N) {
 
     // PHASE 5 : Coloration des superpixels
     //5.1 Colorer les superpixels avec la moyenne des couleurs de leurs pixels.
+    #pragma omp parallel for collapse(2)
     for (int i = 0; i < height; i++) {
         for (int j = 0; j < width; j++) {
             int index = getIndice(i, j, height, width);

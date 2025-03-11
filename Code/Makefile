@@ -1,6 +1,6 @@
 # Compiler and linker
 CXX = g++
-CXXFLAGS = -Wall -std=gnu++17
+CXXFLAGS = -Wall -std=gnu++17 -fopenmp  # Ajout de -fopenmp pour OpenMP
 
 # Directories
 SRC_DIR = .
@@ -16,7 +16,7 @@ all: $(EXEC)
 
 # Rule to build the executable
 $(EXEC): $(OBJ_FILES)
-	$(CXX) $(OBJ_FILES) -o $(EXEC)
+	$(CXX) $(CXXFLAGS) $(OBJ_FILES) -o $(EXEC)  # Ajout de CXXFLAGS ici aussi
 
 # Rule to compile the source files to object files
 $(OBJ_DIR)/%.o: $(SRC_DIR)/%.cpp
