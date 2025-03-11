@@ -255,9 +255,9 @@ Image Image::LABtoRGB() {
         float Z = dataXYZ[i + 2];
 
         // 2.1 Conversion XYZ vers linéaire RGB (sRGB)
-        double R =  3.2406 * (X / 100.0) - 1.5372 * (Y / 100.0) - 0.4986 * (Z / 100.0);
+        double R = 3.2406 * (X / 100.0) - 1.5372 * (Y / 100.0) - 0.4986 * (Z / 100.0);
         double G = -0.9689 * (X / 100.0) + 1.8758 * (Y / 100.0) + 0.0415 * (Z / 100.0);
-        double B =  0.0557 * (X / 100.0) - 0.2040 * (Y / 100.0) + 1.0570 * (Z / 100.0);
+        double B = 0.0557 * (X / 100.0) - 0.2040 * (Y / 100.0) + 1.0570 * (Z / 100.0);
 
         // 2.2 Appliquer la correction gamma
         R = (R <= 0.0031308) ? (12.92 * R) : (1.055 * pow(R, 1.0 / 2.4) - 0.055);
@@ -394,7 +394,7 @@ int Image::floodFill(int x, int y, vector<int> &newLabels, int &label, vector<in
                     if (newLabels[nIndex] == -1 && labels[nIndex] == labels[index]) {
                         newLabels[nIndex] = label;
                         q.push({nx, ny});
-                    }                    
+                    }
                 }
             }
         }
@@ -415,7 +415,7 @@ int Image::floodFill(int x, int y, vector<int> &newLabels, int &label, vector<in
  * @return
  */
 int Image::affecterSuperPixelVoisin(int x, int y, vector<int> &newLabels, vector<int> &listeComposantesConnexes,
-                                    vector<int> &labels, int &tailleSeuilMinimal, vector<ClusterCenter> &clusters) {
+                                    vector<int> &labels, int &tailleSeuilMinimal, vector <ClusterCenter> &clusters) {
     float minDistance = INFINITY;
     int bestLabel = -1;
 
@@ -425,7 +425,7 @@ int Image::affecterSuperPixelVoisin(int x, int y, vector<int> &newLabels, vector
             int ny = y + dy;
             if (nx >= 0 && nx < height && ny >= 0 && ny < width) {
                 int nIndex = getIndice(nx, ny, height, width);
-                if (newLabels[nIndex] != newLabels[getIndice(x, y, height, width)] ) {
+                if (newLabels[nIndex] != newLabels[getIndice(x, y, height, width)]) {
                     float distance = calculerDistanceCouleur(clusters[newLabels[nIndex]], x, y);
                     if (distance < minDistance) {
                         minDistance = distance;
@@ -479,13 +479,13 @@ void Image::SLICC(int &k, int &m, int &N) {
     float seuil = 0.00001;
     float deltaCk = 0;
     float lastDeltaCk = INFINITY;
-    int iteration=0;
+    int iteration = 0;
 
     //3.2 Répéter **PHASE 2 et 3** jusqu'à convergence (ΔCk < seuil)
-    while (std::abs(lastDeltaCk-deltaCk) > seuil) {
-        lastDeltaCk=deltaCk;
+    while (std::abs(lastDeltaCk - deltaCk) > seuil) {
+        lastDeltaCk = deltaCk;
         deltaCk = 0;
-        iteration+=1;
+        iteration += 1;
         //2.1 Pour chaque centre de cluster C_k
         for (int cluster = 0; cluster < k; cluster++) {
             //2.2 Pour chaque pixel P(x, y) dans une fenêtre 2S x 2S autour de C_k
@@ -532,7 +532,7 @@ void Image::SLICC(int &k, int &m, int &N) {
     vector<int> listeComposantesConnexes;
     vector<int> newLabels(size / 3, -1);
     int label = 0;
-    cout<<"debut floodfill" << endl;
+    cout << "debut floodfill" << endl;
 // 4.1 Parcourir l'image pour détecter les superpixels non connexes
     for (int i = 0; i < height; i++) {
         for (int j = 0; j < width; j++) {
@@ -552,14 +552,15 @@ void Image::SLICC(int &k, int &m, int &N) {
             int index = getIndice(i, j, height, width);
             // Pour les composantes très petites (< 1% de la taille moyenne des superpixels) on affecte au superpixel voisin le plus proche
             //if (listeComposantesConnexes[newLabels[index]] < tailleSeuilMinimal/100) {
-                // Affecter au superpixel voisin le plus proche
+            // Affecter au superpixel voisin le plus proche
 
-                int bestLabel = affecterSuperPixelVoisin(i, j, newLabels, listeComposantesConnexes, labels, tailleSeuilMinimal, clusters);
+            int bestLabel = affecterSuperPixelVoisin(i, j, newLabels, listeComposantesConnexes, labels,
+                                                     tailleSeuilMinimal, clusters);
 
-                // si le pixel n'est pas affecté à un superpixel voisin, on le laisse tel quel
-                if (bestLabel != -1) {
-                    newLabels[index] = bestLabel;
-                }
+            // si le pixel n'est pas affecté à un superpixel voisin, on le laisse tel quel
+            if (bestLabel != -1) {
+                newLabels[index] = bestLabel;
+            }
             //}
         }
     }
@@ -588,6 +589,14 @@ void Image::SLICC(int &k, int &m, int &N) {
  * \param Image1 : Image d'origine sans traitements appliqués
  * \param Image2 : Image d'origine avec traitements appliqués
  */
-void Image::PSNR(Image &image1, Image &image2){
-
+float Image::PSNR(Image &imageTraitee) {
+    float mse = 0.0f;
+    for (int i = 0; i < imageTraitee.height; i++) {
+        for (int j = 0; j < imageTraitee.width; j++) {
+            int index = getIndice(i, j, imageTraitee.height, imageTraitee.width);
+            mse += (this->data[index] - imageTraitee.data[index]) * (this->data[index] - imageTraitee.data[index]);
+        }
+    }
+    mse /= (imageTraitee.width * imageTraitee.height);
+    return 10 * log10(255 * 255 / mse);
 }

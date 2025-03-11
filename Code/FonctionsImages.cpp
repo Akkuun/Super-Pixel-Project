@@ -16,11 +16,13 @@ void SLICC(int argc, char *argv[]) {
     img.read();
     Image imgLAB = img.RGBtoLAB();
     imgLAB.write(outputFilename);
-    int k = 5000;
-    int m = 20;
+    int k = 5000; // Nombre de clusters
+    int m = 20; //résolution spatiale
     int N = img.getSize();
     imgLAB.SLICC(k, m, N);
     imgLAB.write(outputFilename);
     Image imgOUT=imgLAB.LABtoRGB();
-    imgOUT.write(outputFilename);    
+    imgOUT.write(outputFilename);
+    cout << "Fin SLICC" << endl;
+    cout << img.PSNR(imgOUT) << endl;
 }

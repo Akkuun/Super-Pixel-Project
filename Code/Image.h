@@ -32,8 +32,7 @@ public:
     OCTET *copyData(const OCTET *data, int size);
     OCTET* createData();
     int getIndice(int i,int j,int nH,int nW);
-    void PSNR(Image &image1, Image &image2);
-
+    float PSNR(Image &imageTraitee);
     //fonctions de traitement
     void appliquerSeuil(int seuil);
     void SLICC(int &k, int &m, int &N);
