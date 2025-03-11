@@ -16,7 +16,7 @@ void SLICC(int argc, char *argv[]) {
     img.read();
     Image imgLAB = img.RGBtoLAB();
     imgLAB.write(outputFilename);
-    int k = 20000; // Nombre de clusters
+    int k = 12000; // Nombre de clusters
     int m = 20; //résolution spatiale
     int N = img.getSize();
     imgLAB.SLICC(k, m, N);
