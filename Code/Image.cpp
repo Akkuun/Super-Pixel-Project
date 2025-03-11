@@ -5,6 +5,7 @@
 #include <cstring>
 #include <cmath>
 #include <queue>
+#include <omp.h>
 
 using namespace std;
 
@@ -302,9 +303,10 @@ Image Image::LABtoRGB() {
  */
 float Image::calculerDistanceCouleur(ClusterCenter &cluster, int &i, int &j) {
     // Calcul de la distance couleur
-    float dL = cluster.Lk - data[getIndice(i, j, height, width) * 3];
-    float da = cluster.ak - data[getIndice(i, j, height, width) * 3 + 1];
-    float db = cluster.bk - data[getIndice(i, j, height, width) * 3 + 2];
+    int index = getIndice(i, j, height, width) * 3;
+    float dL = cluster.Lk - data[index];
+    float da = cluster.ak - data[index + 1];
+    float db = cluster.bk - data[index + 2];
     return sqrt(dL * dL + da * da + db * db);
 }
 
@@ -463,10 +465,10 @@ void Image::SLICC(int &k, int &m, int &N) {
         clusters[clusterActuel].xk = x;
         clusters[clusterActuel].yk = y;
         // on met dans le cluster les valeurs de couleur du pixel L a b
-        cout << getIndice(y,x,height,width) << endl;
-        clusters[clusterActuel].Lk = data[getIndice(y,x,height,width) * 3];
-        clusters[clusterActuel].ak = data[getIndice(y,x,height,width) * 3 + 1];
-        clusters[clusterActuel].bk = data[getIndice(y,x,height,width) * 3 + 2];
+        int index = getIndice(y,x,height,width);
+        clusters[clusterActuel].Lk = data[index* 3];
+        clusters[clusterActuel].ak = data[index * 3 + 1];
+        clusters[clusterActuel].bk = data[index * 3 + 2];
     }
     cout << "1.3 done" << endl;
 
@@ -487,6 +489,7 @@ void Image::SLICC(int &k, int &m, int &N) {
         deltaCk = 0;
         iteration += 1;
         //2.1 Pour chaque centre de cluster C_k
+        #pragma omp parallel for
         for (int cluster = 0; cluster < k; cluster++) {
             //2.2 Pour chaque pixel P(x, y) dans une fenêtre 2S x 2S autour de C_k
             for (int dx = -S; dx <= S; dx++) {
@@ -510,6 +513,7 @@ void Image::SLICC(int &k, int &m, int &N) {
             }
         }
 
+        #pragma omp parallel for reduction(+:deltaCk)
         // PHASE 3 : Mise à jour des centres des superpixels
         for (int cluster = 0; cluster < k; cluster++) {
             float newL, newa, newb, newx, newy, newDeltaCk;
@@ -550,24 +554,18 @@ void Image::SLICC(int &k, int &m, int &N) {
     for (int i = 0; i < height; i++) {
         for (int j = 0; j < width; j++) {
             int index = getIndice(i, j, height, width);
-            // Pour les composantes très petites (< 1% de la taille moyenne des superpixels) on affecte au superpixel voisin le plus proche
-            //if (listeComposantesConnexes[newLabels[index]] < tailleSeuilMinimal/100) {
-            // Affecter au superpixel voisin le plus proche
-
+             // Affecter au superpixel voisin le plus proche
             int bestLabel = affecterSuperPixelVoisin(i, j, newLabels, listeComposantesConnexes, labels,
                                                      tailleSeuilMinimal, clusters);
-
             // si le pixel n'est pas affecté à un superpixel voisin, on le laisse tel quel
             if (bestLabel != -1) {
                 newLabels[index] = bestLabel;
             }
-            //}
         }
     }
     cout << "fin fusion" << endl;
-// Mettre à jour les labels
+    // Mettre à jour les labels
     labels = newLabels;
-
 
     // PHASE 5 : Coloration des superpixels
     //5.1 Colorer les superpixels avec la moyenne des couleurs de leurs pixels.
@@ -580,7 +578,6 @@ void Image::SLICC(int &k, int &m, int &N) {
             data[index * 3 + 2] = clusters[cluster].bk;
         }
     }
-
     cout << "Fin SLICC" << endl;
 }
 
