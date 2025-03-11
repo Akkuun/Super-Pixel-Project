@@ -463,9 +463,10 @@ void Image::SLICC(int &k, int &m, int &N) {
         clusters[clusterActuel].xk = x;
         clusters[clusterActuel].yk = y;
         // on met dans le cluster les valeurs de couleur du pixel L a b
-        clusters[clusterActuel].Lk = data[(y * width + x) * 3];
-        clusters[clusterActuel].ak = data[(y * width + x) * 3 + 1];
-        clusters[clusterActuel].bk = data[(y * width + x) * 3 + 2];
+        cout << getIndice(y,x,height,width) << endl;
+        clusters[clusterActuel].Lk = data[getIndice(y,x,height,width) * 3];
+        clusters[clusterActuel].ak = data[getIndice(y,x,height,width) * 3 + 1];
+        clusters[clusterActuel].bk = data[getIndice(y,x,height,width) * 3 + 2];
     }
     cout << "1.3 done" << endl;
 
