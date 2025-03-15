@@ -45,12 +45,14 @@ public:
     int floodFill(int x, int y, vector<int> &newLabels, int &label,vector<int> &labels);
     int affecterSuperPixelVoisin(int x, int y, vector<int> &newLabels, vector<int> &listeComposantesConnexes, vector<int> &labels,
                                  int &tailleSeuilMinimal, vector<ClusterCenter> &clusters);
+    Image compressionCreationPalette();
 
 private:
-    std::string filename;
+    string filename;
     Format format;
     int width, height, size;
     OCTET *data;
+    vector<ClusterCenter> clusters;
 };
 
 #endif // IMAGE_H

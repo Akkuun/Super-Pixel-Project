@@ -16,7 +16,7 @@ using namespace std;
  * \param format Format de l'image (PGM ou PPM).
  */
 Image::Image(const std::string &filename, Format format)
-        : filename(filename), format(format), width(0), height(0), size(0), data(nullptr) {}
+        : filename(filename), format(format), width(0), height(0), size(0), data(nullptr), clusters() {}
 
 /**
  * \brief Destructeur de la classe Image.
@@ -25,6 +25,9 @@ Image::Image(const std::string &filename, Format format)
 Image::~Image() {
     if (data) {
         free(data);
+    }
+    if(!clusters.empty()){
+        clusters.clear();
     }
 }
 
@@ -373,7 +376,7 @@ void Image::calculerNouveauCentre(vector <ClusterCenter> &clusters, vector<int> 
  * @param newLabels la référence de la liste des nouveaux labels pour classer les composantes connexes
  * @param label la référence du label actuel passé en paramtre de la fonction
  * @param componentSize la référence de la liste des tailles des composantes connexes
- * @return
+ * @return la taille de la composante connexe
  */
 int Image::floodFill(int x, int y, vector<int> &newLabels, int &label, vector<int> &labels) {
     queue <pair<int, int>> q;
@@ -414,7 +417,7 @@ int Image::floodFill(int x, int y, vector<int> &newLabels, int &label, vector<in
  * @param labels la référence de la liste des labels des pixels
  * @param tailleSeuilMinimal la référence de la taille minimale des composantes connexes
  * @param clusters la référence de la liste des clusters
- * @return
+ * @return le label du superpixel voisin
  */
 int Image::affecterSuperPixelVoisin(int x, int y, vector<int> &newLabels, vector<int> &listeComposantesConnexes,
                                     vector<int> &labels, int &tailleSeuilMinimal, vector <ClusterCenter> &clusters) {
@@ -453,7 +456,7 @@ void Image::SLICC(int &k, int &m, int &N) {
     //1.2 Définir le nombre de superpixels souhaité et calculer le pas de grille avec S = sqrt(N / k).
     // N / k donne le nombre total de super pixel présent dans la grille donc on fait sqrt pour récupérer la longueur du carré de S
     float S = sqrt(static_cast<float>(N) / k);
-    cout << "1.3 Begin" << endl;
+    cout << "Initialisation des centres de clusters" << endl;
     //1.3 Placer les centres de clusters Ck sur une grille régulière (avec un léger ajustement pour éviter les bords).
     vector <ClusterCenter> clusters(k);
     for (int clusterActuel = 0; clusterActuel < k; clusterActuel++) {
@@ -465,12 +468,12 @@ void Image::SLICC(int &k, int &m, int &N) {
         clusters[clusterActuel].xk = x;
         clusters[clusterActuel].yk = y;
         // on met dans le cluster les valeurs de couleur du pixel L a b
-        int index = getIndice(y,x,height,width);
-        clusters[clusterActuel].Lk = data[index* 3];
+        int index = getIndice(y, x, height, width);
+        clusters[clusterActuel].Lk = data[index * 3];
         clusters[clusterActuel].ak = data[index * 3 + 1];
         clusters[clusterActuel].bk = data[index * 3 + 2];
     }
-    cout << "1.3 done" << endl;
+    cout << "fin initilisation des centres de clusters" << endl;
 
     //1.4 Initialiser la matrice des labels (indices des centres)  L(x, y) à -1 et la matrice des distances   D(x, y) à INF
     // dans notre cas les labels sont les indices des clusters
@@ -482,14 +485,14 @@ void Image::SLICC(int &k, int &m, int &N) {
     float deltaCk = 0;
     float lastDeltaCk = INFINITY;
     int iteration = 0;
-
+    cout << "debut convergence des centres de clusters" << endl;
     //3.2 Répéter **PHASE 2 et 3** jusqu'à convergence (ΔCk < seuil)
     while (std::abs(lastDeltaCk - deltaCk) > seuil) {
         lastDeltaCk = deltaCk;
         deltaCk = 0;
         iteration += 1;
         //2.1 Pour chaque centre de cluster C_k
-        #pragma omp parallel for
+#pragma omp parallel for
         for (int cluster = 0; cluster < k; cluster++) {
             //2.2 Pour chaque pixel P(x, y) dans une fenêtre 2S x 2S autour de C_k
             for (int dx = -S; dx <= S; dx++) {
@@ -513,7 +516,7 @@ void Image::SLICC(int &k, int &m, int &N) {
             }
         }
 
-        #pragma omp parallel for reduction(+:deltaCk)
+#pragma omp parallel for reduction(+:deltaCk)
         // PHASE 3 : Mise à jour des centres des superpixels
         for (int cluster = 0; cluster < k; cluster++) {
             float newL, newa, newb, newx, newy, newDeltaCk;
@@ -536,7 +539,7 @@ void Image::SLICC(int &k, int &m, int &N) {
     vector<int> listeComposantesConnexes;
     vector<int> newLabels(size / 3, -1);
     int label = 0;
-    cout << "debut floodfill" << endl;
+    cout << "debut de la correction de la connectivié via floodFill" << endl;
 // 4.1 Parcourir l'image pour détecter les superpixels non connexes
     for (int i = 0; i < height; i++) {
         for (int j = 0; j < width; j++) {
@@ -548,13 +551,14 @@ void Image::SLICC(int &k, int &m, int &N) {
             }
         }
     }
-    cout << "debut fusion" << endl;
+    cout << "fin de la correction de la connectivié via floodFill" << endl;
+    cout << "debut fusion des petis segments" << endl;
 // 4.2 Fusionner les petits segments
     int tailleSeuilMinimal = size / (3 * k);
     for (int i = 0; i < height; i++) {
         for (int j = 0; j < width; j++) {
             int index = getIndice(i, j, height, width);
-             // Affecter au superpixel voisin le plus proche
+            // Affecter au superpixel voisin le plus proche
             int bestLabel = affecterSuperPixelVoisin(i, j, newLabels, listeComposantesConnexes, labels,
                                                      tailleSeuilMinimal, clusters);
             // si le pixel n'est pas affecté à un superpixel voisin, on le laisse tel quel
@@ -563,13 +567,13 @@ void Image::SLICC(int &k, int &m, int &N) {
             }
         }
     }
-    cout << "fin fusion" << endl;
+    cout << "fin fusion des petis segments" << endl;
     // Mettre à jour les labels
     labels = newLabels;
 
     // PHASE 5 : Coloration des superpixels
     //5.1 Colorer les superpixels avec la moyenne des couleurs de leurs pixels.
-    #pragma omp parallel for collapse(2)
+#pragma omp parallel for collapse(2)
     for (int i = 0; i < height; i++) {
         for (int j = 0; j < width; j++) {
             int index = getIndice(i, j, height, width);
@@ -579,6 +583,7 @@ void Image::SLICC(int &k, int &m, int &N) {
             data[index * 3 + 2] = clusters[cluster].bk;
         }
     }
+    this->clusters = clusters;
     cout << "Fin SLICC" << endl;
 }
 
@@ -586,6 +591,7 @@ void Image::SLICC(int &k, int &m, int &N) {
  * \brief Calculer le PSNR entre 2 images
  * \param Image1 : Image d'origine sans traitements appliqués
  * \param Image2 : Image d'origine avec traitements appliqués
+ * \return Le PSNR entre les 2 images
  */
 float Image::PSNR(Image &imageTraitee) {
     float mse = 0.0f;
@@ -597,4 +603,46 @@ float Image::PSNR(Image &imageTraitee) {
     }
     mse /= (imageTraitee.width * imageTraitee.height);
     return 10 * log10(255 * 255 / mse);
+}
+
+/**
+*   \brief Applique la technique de compression avec pertes via une palette de couleurs
+*   \return Une nouvelle image compressée avec une palette de couleurs en RGB
+ */
+Image Image::compressionCreationPalette() {
+    std::vector <ClusterCenter> palette = this->clusters;
+
+    // transformation de l'image en palette
+    for (int i = 0; i < height; i++) {
+        for (int j = 0; j < width; j++) {
+            int index = getIndice(i, j, height, width);
+            int bestCluster = 0;
+            float minDistance = INFINITY;
+            //récupération du cluster le plus proche pour le pixel en mesurant sa distance
+            for (int k = 0; k < palette.size(); k++) {
+                float distance = calculerDistanceCouleur(palette[k], i, j);
+                if (distance < minDistance) {
+                    minDistance = distance;
+                    bestCluster = k;
+                }
+            }
+            data[index * 3] = palette[bestCluster].Lk;
+            data[index * 3 + 1] = palette[bestCluster].ak;
+            data[index * 3 + 2] = palette[bestCluster].bk;
+        }
+    }
+
+    Image imgPalette(filename, PPM);
+    imgPalette.width = width;
+    imgPalette.height = height;
+    imgPalette.size = size;
+    imgPalette.data = copyData(data, size);
+
+    Image imgPaletteRGB = imgPalette.LABtoRGB();
+
+    return imgPaletteRGB;
+
+
+
+
 }
