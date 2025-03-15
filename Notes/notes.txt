@@ -14,3 +14,11 @@ DANS ALGO SLICC - déroulé du travail
 3) début code 
 
 tranformation de l'image en format RGB en format CIELAB.
+
+
+
+
+Note Présentation :
+Ajouter lien vers les références des articles lors des diapo sur les techniques
+
+Bien expliquer le travail sur l'optimisation de réalisé
