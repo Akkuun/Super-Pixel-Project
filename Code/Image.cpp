@@ -6,6 +6,7 @@
 #include <cmath>
 #include <queue>
 #include <omp.h>
+#include <climits>
 
 using namespace std;
 
@@ -14,6 +15,7 @@ using namespace std;
  * \brief Constructeur de la classe Image.
  * \param filename Nom du fichier image.
  * \param format Format de l'image (PGM ou PPM).
+ * \return Une nouvelle instance de la classe Image.
  */
 Image::Image(const std::string &filename, Format format)
         : filename(filename), format(format), width(0), height(0), size(0), data(nullptr), clusters() {}
@@ -101,19 +103,6 @@ int Image::getIndice(int i, int j, int nH, int nW) {
     return i * nW + j;
 }
 
-void Image::appliquerSeuil(int seuil) {
-    if (format == PGM) {
-        for (int i = 0; i < size; i++) {
-            data[i] = (data[i] < seuil) ? 0 : 255;
-        }
-    } else if (format == PPM) {
-        for (int i = 0; i < size; i += 3) {
-            data[i] = (data[i] < seuil) ? 0 : 255;
-            data[i + 1] = (data[i + 1] < seuil) ? 0 : 255;
-            data[i + 2] = (data[i + 2] < seuil) ? 0 : 255;
-        }
-    }
-}
 
 /**
  * \brief Copie les données de l'image dans un nouveau tableau.
@@ -610,39 +599,56 @@ float Image::PSNR(Image &imageTraitee) {
 *   \return Une nouvelle image compressée avec une palette de couleurs en RGB
  */
 Image Image::compressionCreationPalette() {
-    std::vector <ClusterCenter> palette = this->clusters;
+    // Step 1: Convert image data to a format suitable for palette creation
+    vector<vector<int>> colorHistogram(256 * 256 * 256, vector<int>(3, 0));
+    for (int i = 0; i < size; i += 3) {
+        int r = data[i];
+        int g = data[i + 1];
+        int b = data[i + 2];
+        int index = (r << 16) | (g << 8) | b;
+        colorHistogram[index][0]++;
+        colorHistogram[index][1] = r;
+        colorHistogram[index][2] = g;
+        colorHistogram[index][3] = b;
+    }
 
-    // transformation de l'image en palette
-    for (int i = 0; i < height; i++) {
-        for (int j = 0; j < width; j++) {
-            int index = getIndice(i, j, height, width);
-            int bestCluster = 0;
-            float minDistance = INFINITY;
-            //récupération du cluster le plus proche pour le pixel en mesurant sa distance
-            for (int k = 0; k < palette.size(); k++) {
-                float distance = calculerDistanceCouleur(palette[k], i, j);
-                if (distance < minDistance) {
-                    minDistance = distance;
-                    bestCluster = k;
-                }
-            }
-            data[index * 3] = palette[bestCluster].Lk;
-            data[index * 3 + 1] = palette[bestCluster].ak;
-            data[index * 3 + 2] = palette[bestCluster].bk;
+    // Step 2: Create a color palette by clustering the colors
+    vector<vector<int>> palette;
+    for (const auto &color : colorHistogram) {
+        if (color[0] > 0) {
+            palette.push_back({color[1], color[2], color[3]});
         }
     }
 
-    Image imgPalette(filename, PPM);
-    imgPalette.width = width;
-    imgPalette.height = height;
-    imgPalette.size = size;
-    imgPalette.data = copyData(data, size);
+    // Step 3: Map the original image colors to the nearest palette colors
+    OCTET *compressedData = createData();
+    for (int i = 0; i < size; i += 3) {
+        int r = data[i];
+        int g = data[i + 1];
+        int b = data[i + 2];
+        int minDistance = INT_MAX;
+        int bestMatch = 0;
+        for (int j = 0; j < palette.size(); j++) {
+            int pr = palette[j][0];
+            int pg = palette[j][1];
+            int pb = palette[j][2];
+            int distance = (r - pr) * (r - pr) + (g - pg) * (g - pg) + (b - pb) * (b - pb);
+            if (distance < minDistance) {
+                minDistance = distance;
+                bestMatch = j;
+            }
+        }
+        compressedData[i] = palette[bestMatch][0];
+        compressedData[i + 1] = palette[bestMatch][1];
+        compressedData[i + 2] = palette[bestMatch][2];
+    }
 
-    Image imgPaletteRGB = imgPalette.LABtoRGB();
-
-    return imgPaletteRGB;
-
-
-
-
+    // Step 4: Return a new Image object with the compressed data
+    Image compressedImage(filename, PPM);
+    compressedImage.width = width;
+    compressedImage.height = height;
+    compressedImage.size = size;
+    compressedImage.data = copyData(compressedData, size);
+    free(compressedData);
+    return compressedImage;
 }

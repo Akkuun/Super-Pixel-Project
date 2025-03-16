@@ -34,7 +34,6 @@ public:
     int getIndice(int i,int j,int nH,int nW);
     float PSNR(Image &imageTraitee);
     //fonctions de traitement
-    void appliquerSeuil(int seuil);
     void SLICC(int &k, int &m, int &N);
     Image RGBtoLAB();
     Image LABtoRGB();
