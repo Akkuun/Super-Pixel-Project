@@ -17,7 +17,9 @@ struct ClusterCenter {
 
 class Image {
 public:
-    enum Format { PGM, PPM , LAB};
+    enum Format {
+        PGM, PPM, LAB
+    };
 
     Image(const std::string &filename, Format format);
     ~Image();
@@ -26,39 +28,44 @@ public:
     void write(const std::string &filename);
     int getWidth() const { return width; }
     int getHeight() const { return height; }
-    int getSize() const { return width*height; }
-    OCTET* getData() const { return data; }
-    OCTET* copyData() const;
+    int getSize() const { return width * height; }
+    OCTET *getData() const { return data; }
+    OCTET *copyData() const;
     OCTET *copyData(const OCTET *data, int size);
-    OCTET* createData();
-    int getIndice(int i,int j,int nH,int nW);
+    OCTET *createData();
+    int getIndice(int i, int j, int nH, int nW);
     float PSNR(Image &imageTraitee);
+
     //fonctions de traitement
     void SLICC(int &k, int &m, int &N);
     Image RGBtoLAB();
     Image LABtoRGB();
-    float calculerDistanceCouleur(ClusterCenter &cluster ,int &i,int &j);
+    float calculerDistanceCouleur(ClusterCenter &cluster, int &i, int &j);
     float calculerDistanceSpatiale(ClusterCenter &cluster, int &i, int &j);
-    void calculerNouveauCentre(vector<ClusterCenter> &clusters, vector<int> &labels, int cluster, float &newL, float &newa,
-                               float &newb, float &newx, float &newy, float &newDeltaCk);
-    int floodFill(int x, int y, vector<int> &newLabels, int &label,vector<int> &labels);
-    int affecterSuperPixelVoisin(int x, int y, vector<int> &newLabels, vector<int> &listeComposantesConnexes, vector<int> &labels,
-                                 int &tailleSeuilMinimal, vector<ClusterCenter> &clusters);
+    void
+    calculerNouveauCentre(vector <ClusterCenter> &clusters, vector<int> &labels, int cluster, float &newL, float &newa,
+                          float &newb, float &newx, float &newy, float &newDeltaCk);
+    int floodFill(int x, int y, vector<int> &newLabels, int &label, vector<int> &labels);
+    int affecterSuperPixelVoisin(int x, int y, vector<int> &newLabels, vector<int> &listeComposantesConnexes,
+                                 vector<int> &labels,
+                                 int &tailleSeuilMinimal, vector <ClusterCenter> &clusters);
     Image K_Mean();
     float calculerTauxCompression(Image &imageCompressee);
-    vector<int> ClassificationPixelKClasse(const vector<vector<int>> &classes, OCTET *ImgIn, int K);
+    vector<int> ClassificationPixelKClasse(const vector <vector<int>> &classes, OCTET *ImgIn, int K);
     float distanceEuclidienne(unsigned char *ImgIn, int i, int j, vector<int> valueClasse);
-    void calculerMoyenneKClasses(const vector<int> &pixelClasses, vector<vector<int>> &classes, OCTET *ImgIn,
+    void calculerMoyenneKClasses(const vector<int> &pixelClasses, vector <vector<int>> &classes, OCTET *ImgIn,
                                  int K);
+    Image genererImageCompresseeIndice();
+    Image genererImageCompresseePaletteCouleur();
 
-
-        private:
+private:
     string filename;
     Format format;
     int width, height, size;
     OCTET *data;
-    vector<int> labels;
-    vector<ClusterCenter> clusters;
+    vector <vector<int>> classes;
+    vector<int> pixelClasses;
+
 };
 
 #endif // IMAGE_H

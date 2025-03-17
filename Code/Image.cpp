@@ -18,7 +18,7 @@ using namespace std;
  * \return Une nouvelle instance de la classe Image.
  */
 Image::Image(const std::string &filename, Format format)
-        : filename(filename), format(format), width(0), height(0), size(0), data(nullptr), clusters(), labels() {}
+        : filename(filename), format(format), width(0), height(0), size(0), data(nullptr), pixelClasses(), classes() {}
 
 /**
  * \brief Destructeur de la classe Image.
@@ -27,9 +27,6 @@ Image::Image(const std::string &filename, Format format)
 Image::~Image() {
     if (data) {
         free(data);
-    }
-    if (!clusters.empty()) {
-        clusters.clear();
     }
 }
 
@@ -572,8 +569,6 @@ void Image::SLICC(int &k, int &m, int &N) {
             data[index * 3 + 2] = clusters[cluster].bk;
         }
     }
-    this->clusters = clusters;
-    this->labels = labels;
     cout << "Fin SLICC" << endl;
 }
 
@@ -600,47 +595,38 @@ float Image::PSNR(Image &imageTraitee) {
  * @return L'image avec les couleurs K_Mean
  */
 Image Image::K_Mean() {
-    vector <vector<int>> classes; // vecteur contenant les classes de couleurs
+    vector<vector<int>> classes; // Vector containing color classes
     int K = 256;
     OCTET *ImgOutFinal = createData();
-    OCTET *ImgOutInit = createData();
-    OCTET *ImgIn = copyData();
-    vector<int> pixelClasses(height * width, 0); // vecteur contenant les pixels des classes
+    vector<int> pixelClassesLocal(height * width, 0); // Vector containing pixel classes
 
-    cout << "debut remplissage K-MEAN 256 couleurs" << endl;
-    //on prends 256 couleurs aléatoires pour définir nos classe
+    // Initialize K random colors for the classes
     for (int i = 0; i < K; i++) {
         int randIndex = rand() % (width * height);
-        //creation d'une couleur
-        vector<int> color = {ImgIn[randIndex * 3], ImgIn[randIndex * 3 + 1], ImgIn[randIndex * 3 + 2]};
-        //insertion couleur
+        vector<int> color = {data[randIndex * 3], data[randIndex * 3 + 1], data[randIndex * 3 + 2]};
         classes.push_back(color);
     }
-    cout << "fin remplissage K-MEAN 256 couleurs" << endl;
-    //on applique l'algorithme de K-Mean
-    cout << "debut K-MEAN" << endl;
+
     bool converged = false;
     while (!converged) {
-        pixelClasses = ClassificationPixelKClasse(classes, ImgIn, K);
+        pixelClassesLocal = ClassificationPixelKClasse(classes, data, K);
 
         for (int i = 0; i < height; i++) {
             for (int j = 0; j < width; j++) {
-                //on recupere la couleur de la classe correspondante
-                vector<int> color = classes[pixelClasses[getIndice(i, j, width, height)]];
-                ImgOutInit[getIndice(i, j, width, height) * 3] = color[0];
-                ImgOutInit[getIndice(i, j, width, height) * 3 + 1] = color[1];
-                ImgOutInit[getIndice(i, j, width, height) * 3 + 2] = color[2];
+                vector<int> color = classes[pixelClassesLocal[getIndice(i, j, width, height)]];
+                ImgOutFinal[getIndice(i, j, width, height) * 3] = color[0];
+                ImgOutFinal[getIndice(i, j, width, height) * 3 + 1] = color[1];
+                ImgOutFinal[getIndice(i, j, width, height) * 3 + 2] = color[2];
             }
         }
 
+        vector<vector<int>> oldClasses = classes;
+        calculerMoyenneKClasses(pixelClassesLocal, classes, data, K);
 
-        vector <vector<int>> oldClasses = classes; // Sauvegarde des anciennes classes
-        calculerMoyenneKClasses(pixelClasses, classes, ImgIn, K);
-        // Vérification de la convergence : si les classes ne changent plus, alors elles sont bien séparées
         converged = true;
         for (int i = 0; i < K; i++) {
             for (int j = 0; j < 3; j++) {
-                if (abs(classes[i][j] - oldClasses[i][j]) > 1) { // Seuil de tolérance : 1
+                if (abs(classes[i][j] - oldClasses[i][j]) > 1) {
                     converged = false;
                     break;
                 }
@@ -649,27 +635,14 @@ Image Image::K_Mean() {
         }
     }
 
-    // Generation de l'image avec les nouvelles couleurs de classes
-    for (int i = 0; i < height; i++) {
-        for (int j = 0; j < width; j++) {
-            //on recupere la couleur de la classe correspondante
-            vector<int> color = classes[pixelClasses[getIndice(i, j, width, height)]];
-            ImgOutFinal[getIndice(i, j, width, height) * 3] = color[0];
-            ImgOutFinal[getIndice(i, j, width, height) * 3 + 1] = color[1];
-            ImgOutFinal[getIndice(i, j, width, height) * 3 + 2] = color[2];
-        }
-    }
-    cout << "fin K-MEAN" << endl;
+    this->pixelClasses = pixelClassesLocal;
+    this->classes = classes;
 
-    Image K_mean(filename + "_K_MEAN", PPM);
+    Image K_mean(filename, Image::PPM);
     K_mean.width = width;
     K_mean.height = height;
     K_mean.data = ImgOutFinal;
-    free(ImgIn);
-    free(ImgOutInit);
     return K_mean;
-
-
 }
 
 /**
@@ -779,4 +752,53 @@ Image::calculerMoyenneKClasses(const vector<int> &pixelClasses, vector <vector<i
 
 }
 
+Image Image::genererImageCompresseeIndice() {
+    // Create a new image for the grayscale output
+    Image imageCompresseIndice(filename, PGM);
+    imageCompresseIndice.width = width;
+    imageCompresseIndice.height = height;
+    imageCompresseIndice.size = width * height;
+    imageCompresseIndice.data = createData();
 
+    // Iterate over each pixel and set the grayscale value to the class index
+    for (int i = 0; i < height; i++) {
+        for (int j = 0; j < width; j++) {
+            int index = getIndice(i, j, height, width);
+            imageCompresseIndice.data[index] = static_cast<OCTET>(pixelClasses[index]);
+        }
+    }
+
+    return imageCompresseIndice;
+}
+Image Image::genererImageCompresseePaletteCouleur() {
+    // création d'une palette de couleur visible
+    Image imageCompressePaletteCouleur(filename, PPM);
+    imageCompressePaletteCouleur.width = width;
+    imageCompressePaletteCouleur.height = height;
+    imageCompressePaletteCouleur.data = createData();
+
+    // on écrit dans une image les couleurs de chaque classe
+    // création d'une image graphique représentant les images de la palette (couleurs des classes)
+    int blocSize = 10; // Taille d'un bloc (largeur et hauteur du carré)
+    for (int blocY = 0; blocY < height / blocSize; blocY++) {
+        for (int blocX = 0; blocX < width / blocSize; blocX++) {
+            int blocIndex = (blocY * (width / blocSize)) + blocX;
+            if (blocIndex >= pixelClasses.size()) {
+                blocIndex = pixelClasses.size() - 1;
+            }
+            for (int y = blocY * blocSize; y < (blocY + 1) * blocSize; y++) {
+                for (int x = blocX * blocSize; x < (blocX + 1) * blocSize; x++) {
+                    int index = getIndice(y, x, height, width) * 3;
+                    if (index >= width * height * 3) {
+                        std::cerr << "Index out of bounds: " << index << std::endl;
+                        continue;
+                    }
+                    imageCompressePaletteCouleur.data[index] = classes[blocIndex][0];
+                    imageCompressePaletteCouleur.data[index + 1] = classes[blocIndex][1];
+                    imageCompressePaletteCouleur.data[index + 2] = classes[blocIndex][2];
+                }
+            }
+        }
+    }
+    return imageCompressePaletteCouleur;
+}
