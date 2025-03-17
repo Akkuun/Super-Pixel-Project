@@ -18,7 +18,7 @@ using namespace std;
  * \return Une nouvelle instance de la classe Image.
  */
 Image::Image(const std::string &filename, Format format)
-        : filename(filename), format(format), width(0), height(0), size(0), data(nullptr), clusters() {}
+        : filename(filename), format(format), width(0), height(0), size(0), data(nullptr), clusters(), labels() {}
 
 /**
  * \brief Destructeur de la classe Image.
@@ -28,7 +28,7 @@ Image::~Image() {
     if (data) {
         free(data);
     }
-    if(!clusters.empty()){
+    if (!clusters.empty()) {
         clusters.clear();
     }
 }
@@ -573,6 +573,7 @@ void Image::SLICC(int &k, int &m, int &N) {
         }
     }
     this->clusters = clusters;
+    this->labels = labels;
     cout << "Fin SLICC" << endl;
 }
 
@@ -595,60 +596,187 @@ float Image::PSNR(Image &imageTraitee) {
 }
 
 /**
-*   \brief Applique la technique de compression avec pertes via une palette de couleurs
-*   \return Une nouvelle image compressée avec une palette de couleurs en RGB
+ * \brief Applique K_Mean sur l'image
+ * @return L'image avec les couleurs K_Mean
  */
-Image Image::compressionCreationPalette() {
-    // Step 1: Convert image data to a format suitable for palette creation
-    vector<vector<int>> colorHistogram(256 * 256 * 256, vector<int>(3, 0));
-    for (int i = 0; i < size; i += 3) {
-        int r = data[i];
-        int g = data[i + 1];
-        int b = data[i + 2];
-        int index = (r << 16) | (g << 8) | b;
-        colorHistogram[index][0]++;
-        colorHistogram[index][1] = r;
-        colorHistogram[index][2] = g;
-        colorHistogram[index][3] = b;
-    }
+Image Image::K_Mean() {
+    vector <vector<int>> classes; // vecteur contenant les classes de couleurs
+    int K = 256;
+    OCTET *ImgOutFinal = createData();
+    OCTET *ImgOutInit = createData();
+    OCTET *ImgIn = copyData();
+    vector<int> pixelClasses(height * width, 0); // vecteur contenant les pixels des classes
 
-    // Step 2: Create a color palette by clustering the colors
-    vector<vector<int>> palette;
-    for (const auto &color : colorHistogram) {
-        if (color[0] > 0) {
-            palette.push_back({color[1], color[2], color[3]});
-        }
+    cout << "debut remplissage K-MEAN 256 couleurs" << endl;
+    //on prends 256 couleurs aléatoires pour définir nos classe
+    for (int i = 0; i < K; i++) {
+        int randIndex = rand() % (width * height);
+        //creation d'une couleur
+        vector<int> color = {ImgIn[randIndex * 3], ImgIn[randIndex * 3 + 1], ImgIn[randIndex * 3 + 2]};
+        //insertion couleur
+        classes.push_back(color);
     }
+    cout << "fin remplissage K-MEAN 256 couleurs" << endl;
+    //on applique l'algorithme de K-Mean
+    cout << "debut K-MEAN" << endl;
+    bool converged = false;
+    while (!converged) {
+        pixelClasses = ClassificationPixelKClasse(classes, ImgIn, K);
 
-    // Step 3: Map the original image colors to the nearest palette colors
-    OCTET *compressedData = createData();
-    for (int i = 0; i < size; i += 3) {
-        int r = data[i];
-        int g = data[i + 1];
-        int b = data[i + 2];
-        int minDistance = INT_MAX;
-        int bestMatch = 0;
-        for (int j = 0; j < palette.size(); j++) {
-            int pr = palette[j][0];
-            int pg = palette[j][1];
-            int pb = palette[j][2];
-            int distance = (r - pr) * (r - pr) + (g - pg) * (g - pg) + (b - pb) * (b - pb);
-            if (distance < minDistance) {
-                minDistance = distance;
-                bestMatch = j;
+        for (int i = 0; i < height; i++) {
+            for (int j = 0; j < width; j++) {
+                //on recupere la couleur de la classe correspondante
+                vector<int> color = classes[pixelClasses[getIndice(i, j, width, height)]];
+                ImgOutInit[getIndice(i, j, width, height) * 3] = color[0];
+                ImgOutInit[getIndice(i, j, width, height) * 3 + 1] = color[1];
+                ImgOutInit[getIndice(i, j, width, height) * 3 + 2] = color[2];
             }
         }
-        compressedData[i] = palette[bestMatch][0];
-        compressedData[i + 1] = palette[bestMatch][1];
-        compressedData[i + 2] = palette[bestMatch][2];
+
+
+        vector <vector<int>> oldClasses = classes; // Sauvegarde des anciennes classes
+        calculerMoyenneKClasses(pixelClasses, classes, ImgIn, K);
+        // Vérification de la convergence : si les classes ne changent plus, alors elles sont bien séparées
+        converged = true;
+        for (int i = 0; i < K; i++) {
+            for (int j = 0; j < 3; j++) {
+                if (abs(classes[i][j] - oldClasses[i][j]) > 1) { // Seuil de tolérance : 1
+                    converged = false;
+                    break;
+                }
+            }
+            if (!converged) break;
+        }
     }
 
-    // Step 4: Return a new Image object with the compressed data
-    Image compressedImage(filename, PPM);
-    compressedImage.width = width;
-    compressedImage.height = height;
-    compressedImage.size = size;
-    compressedImage.data = copyData(compressedData, size);
-    free(compressedData);
-    return compressedImage;
+    // Generation de l'image avec les nouvelles couleurs de classes
+    for (int i = 0; i < height; i++) {
+        for (int j = 0; j < width; j++) {
+            //on recupere la couleur de la classe correspondante
+            vector<int> color = classes[pixelClasses[getIndice(i, j, width, height)]];
+            ImgOutFinal[getIndice(i, j, width, height) * 3] = color[0];
+            ImgOutFinal[getIndice(i, j, width, height) * 3 + 1] = color[1];
+            ImgOutFinal[getIndice(i, j, width, height) * 3 + 2] = color[2];
+        }
+    }
+    cout << "fin K-MEAN" << endl;
+
+    Image K_mean(filename + "_K_MEAN", PPM);
+    K_mean.width = width;
+    K_mean.height = height;
+    K_mean.data = ImgOutFinal;
+    free(ImgIn);
+    free(ImgOutInit);
+    return K_mean;
+
+
 }
+
+/**
+ * \brief calcule le taux de compression entre l'image originale et l'image compressée
+ * @param imageCompressee
+ * @return
+ */
+float Image::calculerTauxCompression(Image &imageCompressee) {
+    return (size * 3) / (imageCompressee.size * 3);
+}
+
+/**
+ * \brief Répartit les pixels en K classes différentes en calculant leur distance avec les valeur de classes moyennes
+ * @param nH
+ * @param nW
+ * @param classes
+ * @param ImgIn
+ * @param K
+ * @return vecteur contenant les pixels des classes
+ */
+vector<int>
+Image::ClassificationPixelKClasse(const vector <vector<int>> &classes, OCTET *ImgIn, int K) {
+    vector<int> pixelClasses(height * width, 0); // vecteur contenant les pixels des classes
+    int indiceClasseLaPlusProche = 0;
+
+    for (int i = 0; i < height; i++) {
+        for (int j = 0; j < width; j++) {
+            float distanceMin = 1000000;
+            //on doit attribuer la classe la plus proche du pixel,
+            // on doit alors calculer chaque distance entre le pixel et chaque classe
+
+            for (int k = 0; k < K; k++) {
+                //calcul de la distance entre la classe k de la boucle et le point
+                float d = distanceEuclidienne(ImgIn, i, j, classes[k]);
+                if (d < distanceMin) {
+                    distanceMin = d;//si la distance calcule est la plus petite rencontree, alors ça devient la nouvelle distance min
+                    indiceClasseLaPlusProche = k;//on met à jour l'indice de la classe la plus proche
+                }
+            }
+            pixelClasses[getIndice(i, j, width, height)] = indiceClasseLaPlusProche;
+        }
+    }
+
+    return pixelClasses;
+}
+
+/**
+ * \brief calcul la distance euclidienne entre un pixel et une classe
+ * @param ImgIn
+ * @param i
+ * @param j
+ * @param valueClasse
+ * @return la distance euclidienne entre le pixel et la classe
+ */
+float Image::distanceEuclidienne(unsigned char *ImgIn, int i, int j, vector<int> valueClasse) {
+    float distance = 0;
+    // on fait x, y, z
+    //on fait classe 1R, classe 1G, classe 1B
+    for (int k = 0; k < 3; k++) {
+        distance += pow(valueClasse[k] - ImgIn[getIndice(i, j, width, height) * 3 + k], 2);
+    }
+    return sqrt(distance);
+}
+
+/**
+ * \brief Calcul la moyenne des valeurs RGB de chaque classe
+ * @param pixelClasses
+ * @param classes
+ * @param ImgIn
+ * @param K
+ */
+void
+Image::calculerMoyenneKClasses(const vector<int> &pixelClasses, vector <vector<int>> &classes,
+                               OCTET *ImgIn,
+                               int K) {
+    vector <vector<int>> sumClasses(K, vector<int>(3,
+                                                   0)); // Pour accumuler les composantes R, G, B pour chaque classes parmis K
+    vector<int> nbPixelParClasse(K, 0); // Pour accumuler le nombre de pixels par classes
+
+    //on calcul la somme des valeurs RGB de chaque pixel de chaque classe et le nombre de pixel de chaque classe
+    for (int i = 0; i < height; i++) {
+        for (int j = 0; j < width; j++) {
+            //recupere l'indice du point
+            int index = getIndice(i, j, height, width) * 3;
+            //recuperation de la classe du pixel de l'index correspondant
+            int classe = pixelClasses[getIndice(i, j, width, height)];
+            //on ajoute les valeurs RGB du pixel à la classe correspondante
+            sumClasses[classe][0] += ImgIn[index];
+            sumClasses[classe][1] += ImgIn[index + 1];
+            sumClasses[classe][2] += ImgIn[index + 2];
+            //on incremente le nombre de pixel de la classe
+            nbPixelParClasse[classe]++;
+        }
+    }
+
+    for (int i = 0; i < K; i++) {
+        //on calcule la moyenne de chaque classe
+        if (nbPixelParClasse[i] > 0) {
+            for (int k = 0; k < 3; k++) classes[i][k] = sumClasses[i][k] / nbPixelParClasse[i];
+        } else {
+            //si la classe n'a pas de pixel, on met la classe à 0
+            classes[i][0] = 0;
+            classes[i][1] = 0;
+            classes[i][2] = 0;
+        }
+    }
+
+}
+
+

@@ -44,13 +44,20 @@ public:
     int floodFill(int x, int y, vector<int> &newLabels, int &label,vector<int> &labels);
     int affecterSuperPixelVoisin(int x, int y, vector<int> &newLabels, vector<int> &listeComposantesConnexes, vector<int> &labels,
                                  int &tailleSeuilMinimal, vector<ClusterCenter> &clusters);
-    Image compressionCreationPalette();
+    Image K_Mean();
+    float calculerTauxCompression(Image &imageCompressee);
+    vector<int> ClassificationPixelKClasse(const vector<vector<int>> &classes, OCTET *ImgIn, int K);
+    float distanceEuclidienne(unsigned char *ImgIn, int i, int j, vector<int> valueClasse);
+    void calculerMoyenneKClasses(const vector<int> &pixelClasses, vector<vector<int>> &classes, OCTET *ImgIn,
+                                 int K);
 
-private:
+
+        private:
     string filename;
     Format format;
     int width, height, size;
     OCTET *data;
+    vector<int> labels;
     vector<ClusterCenter> clusters;
 };
 
