@@ -4,14 +4,14 @@
 using namespace std;
 
 void SLICC(int argc, char *argv[]) {
-    if (argc != 4) {
-        cout << "Usage: " << argv[0] << " NomImageIn.ppm NomImageOut.ppm  outputFilenameK_mean.ppm" << endl;
+    if (argc != 3) {
+        cout << "Usage: " << argv[0] << " NomImageIn.ppm NomImageOut.ppm" << endl;
         exit(1);
     }
 
     string inputFilename = argv[1];
     string outputFilename = argv[2];
-    string outputFilenameK_mean = argv[3];
+
 
     //récupération image PPM
     Image img(inputFilename, Image::PPM);
@@ -30,10 +30,6 @@ void SLICC(int argc, char *argv[]) {
     imgOUT.write(outputFilename);
     cout << "Fin SLICC" << endl;
     cout << img.PSNR(imgOUT) << endl;
-    cout << "K Mean " << endl;
-    //création de l'image K Mean avec 256 classes
-    Image K_MEAN_SLICC = imgOUT.K_Mean();
-    K_MEAN_SLICC.write(outputFilenameK_mean);
 
 
 

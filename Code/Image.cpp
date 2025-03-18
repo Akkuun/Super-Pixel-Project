@@ -18,7 +18,7 @@ using namespace std;
  * \return Une nouvelle instance de la classe Image.
  */
 Image::Image(const std::string &filename, Format format)
-        : filename(filename), format(format), width(0), height(0), size(0), data(nullptr), pixelClasses(), classes() {}
+        : filename(filename), format(format), width(0), height(0), size(0), data(nullptr) {}
 
 /**
  * \brief Destructeur de la classe Image.
@@ -590,60 +590,6 @@ float Image::PSNR(Image &imageTraitee) {
     return 10 * log10(255 * 255 / mse);
 }
 
-/**
- * \brief Applique K_Mean sur l'image
- * @return L'image avec les couleurs K_Mean
- */
-Image Image::K_Mean() {
-    vector<vector<int>> classes; // Vector containing color classes
-    int K = 256;
-    OCTET *ImgOutFinal = createData();
-    vector<int> pixelClassesLocal(height * width, 0); // Vector containing pixel classes
-
-    // Initialize K random colors for the classes
-    for (int i = 0; i < K; i++) {
-        int randIndex = rand() % (width * height);
-        vector<int> color = {data[randIndex * 3], data[randIndex * 3 + 1], data[randIndex * 3 + 2]};
-        classes.push_back(color);
-    }
-
-    bool converged = false;
-    while (!converged) {
-        pixelClassesLocal = ClassificationPixelKClasse(classes, data, K);
-
-        for (int i = 0; i < height; i++) {
-            for (int j = 0; j < width; j++) {
-                vector<int> color = classes[pixelClassesLocal[getIndice(i, j, width, height)]];
-                ImgOutFinal[getIndice(i, j, width, height) * 3] = color[0];
-                ImgOutFinal[getIndice(i, j, width, height) * 3 + 1] = color[1];
-                ImgOutFinal[getIndice(i, j, width, height) * 3 + 2] = color[2];
-            }
-        }
-
-        vector<vector<int>> oldClasses = classes;
-        calculerMoyenneKClasses(pixelClassesLocal, classes, data, K);
-
-        converged = true;
-        for (int i = 0; i < K; i++) {
-            for (int j = 0; j < 3; j++) {
-                if (abs(classes[i][j] - oldClasses[i][j]) > 1) {
-                    converged = false;
-                    break;
-                }
-            }
-            if (!converged) break;
-        }
-    }
-
-    this->pixelClasses = pixelClassesLocal;
-    this->classes = classes;
-
-    Image K_mean(filename, Image::PPM);
-    K_mean.width = width;
-    K_mean.height = height;
-    K_mean.data = ImgOutFinal;
-    return K_mean;
-}
 
 /**
  * \brief calcule le taux de compression entre l'image originale et l'image compressée
@@ -651,154 +597,8 @@ Image Image::K_Mean() {
  * @return
  */
 float Image::calculerTauxCompression(Image &imageCompressee) {
-    return (size * 3) / (imageCompressee.size * 3);
+    return (height * width) / (imageCompressee.height * imageCompressee.width);
 }
 
-/**
- * \brief Répartit les pixels en K classes différentes en calculant leur distance avec les valeur de classes moyennes
- * @param nH
- * @param nW
- * @param classes
- * @param ImgIn
- * @param K
- * @return vecteur contenant les pixels des classes
- */
-vector<int>
-Image::ClassificationPixelKClasse(const vector <vector<int>> &classes, OCTET *ImgIn, int K) {
-    vector<int> pixelClasses(height * width, 0); // vecteur contenant les pixels des classes
-    int indiceClasseLaPlusProche = 0;
 
-    for (int i = 0; i < height; i++) {
-        for (int j = 0; j < width; j++) {
-            float distanceMin = 1000000;
-            //on doit attribuer la classe la plus proche du pixel,
-            // on doit alors calculer chaque distance entre le pixel et chaque classe
 
-            for (int k = 0; k < K; k++) {
-                //calcul de la distance entre la classe k de la boucle et le point
-                float d = distanceEuclidienne(ImgIn, i, j, classes[k]);
-                if (d < distanceMin) {
-                    distanceMin = d;//si la distance calcule est la plus petite rencontree, alors ça devient la nouvelle distance min
-                    indiceClasseLaPlusProche = k;//on met à jour l'indice de la classe la plus proche
-                }
-            }
-            pixelClasses[getIndice(i, j, width, height)] = indiceClasseLaPlusProche;
-        }
-    }
-
-    return pixelClasses;
-}
-
-/**
- * \brief calcul la distance euclidienne entre un pixel et une classe
- * @param ImgIn
- * @param i
- * @param j
- * @param valueClasse
- * @return la distance euclidienne entre le pixel et la classe
- */
-float Image::distanceEuclidienne(unsigned char *ImgIn, int i, int j, vector<int> valueClasse) {
-    float distance = 0;
-    // on fait x, y, z
-    //on fait classe 1R, classe 1G, classe 1B
-    for (int k = 0; k < 3; k++) {
-        distance += pow(valueClasse[k] - ImgIn[getIndice(i, j, width, height) * 3 + k], 2);
-    }
-    return sqrt(distance);
-}
-
-/**
- * \brief Calcul la moyenne des valeurs RGB de chaque classe
- * @param pixelClasses
- * @param classes
- * @param ImgIn
- * @param K
- */
-void
-Image::calculerMoyenneKClasses(const vector<int> &pixelClasses, vector <vector<int>> &classes,
-                               OCTET *ImgIn,
-                               int K) {
-    vector <vector<int>> sumClasses(K, vector<int>(3,
-                                                   0)); // Pour accumuler les composantes R, G, B pour chaque classes parmis K
-    vector<int> nbPixelParClasse(K, 0); // Pour accumuler le nombre de pixels par classes
-
-    //on calcul la somme des valeurs RGB de chaque pixel de chaque classe et le nombre de pixel de chaque classe
-    for (int i = 0; i < height; i++) {
-        for (int j = 0; j < width; j++) {
-            //recupere l'indice du point
-            int index = getIndice(i, j, height, width) * 3;
-            //recuperation de la classe du pixel de l'index correspondant
-            int classe = pixelClasses[getIndice(i, j, width, height)];
-            //on ajoute les valeurs RGB du pixel à la classe correspondante
-            sumClasses[classe][0] += ImgIn[index];
-            sumClasses[classe][1] += ImgIn[index + 1];
-            sumClasses[classe][2] += ImgIn[index + 2];
-            //on incremente le nombre de pixel de la classe
-            nbPixelParClasse[classe]++;
-        }
-    }
-
-    for (int i = 0; i < K; i++) {
-        //on calcule la moyenne de chaque classe
-        if (nbPixelParClasse[i] > 0) {
-            for (int k = 0; k < 3; k++) classes[i][k] = sumClasses[i][k] / nbPixelParClasse[i];
-        } else {
-            //si la classe n'a pas de pixel, on met la classe à 0
-            classes[i][0] = 0;
-            classes[i][1] = 0;
-            classes[i][2] = 0;
-        }
-    }
-
-}
-
-Image Image::genererImageCompresseeIndice() {
-    // Create a new image for the grayscale output
-    Image imageCompresseIndice(filename, PGM);
-    imageCompresseIndice.width = width;
-    imageCompresseIndice.height = height;
-    imageCompresseIndice.size = width * height;
-    imageCompresseIndice.data = createData();
-
-    // Iterate over each pixel and set the grayscale value to the class index
-    for (int i = 0; i < height; i++) {
-        for (int j = 0; j < width; j++) {
-            int index = getIndice(i, j, height, width);
-            imageCompresseIndice.data[index] = static_cast<OCTET>(pixelClasses[index]);
-        }
-    }
-
-    return imageCompresseIndice;
-}
-Image Image::genererImageCompresseePaletteCouleur() {
-    // création d'une palette de couleur visible
-    Image imageCompressePaletteCouleur(filename, PPM);
-    imageCompressePaletteCouleur.width = width;
-    imageCompressePaletteCouleur.height = height;
-    imageCompressePaletteCouleur.data = createData();
-
-    // on écrit dans une image les couleurs de chaque classe
-    // création d'une image graphique représentant les images de la palette (couleurs des classes)
-    int blocSize = 10; // Taille d'un bloc (largeur et hauteur du carré)
-    for (int blocY = 0; blocY < height / blocSize; blocY++) {
-        for (int blocX = 0; blocX < width / blocSize; blocX++) {
-            int blocIndex = (blocY * (width / blocSize)) + blocX;
-            if (blocIndex >= pixelClasses.size()) {
-                blocIndex = pixelClasses.size() - 1;
-            }
-            for (int y = blocY * blocSize; y < (blocY + 1) * blocSize; y++) {
-                for (int x = blocX * blocSize; x < (blocX + 1) * blocSize; x++) {
-                    int index = getIndice(y, x, height, width) * 3;
-                    if (index >= width * height * 3) {
-                        std::cerr << "Index out of bounds: " << index << std::endl;
-                        continue;
-                    }
-                    imageCompressePaletteCouleur.data[index] = classes[blocIndex][0];
-                    imageCompressePaletteCouleur.data[index + 1] = classes[blocIndex][1];
-                    imageCompressePaletteCouleur.data[index + 2] = classes[blocIndex][2];
-                }
-            }
-        }
-    }
-    return imageCompressePaletteCouleur;
-}
