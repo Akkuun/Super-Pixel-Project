@@ -29,17 +29,9 @@ void SLICC(int argc, char *argv[]) {
     //écriture de l'image Superpixels
     imgOUT.write(outputFilename);
     cout << "Fin SLICC" << endl;
-    //écriture de l'image compressé spatialement
     Image imgOUTLAB = imgOUT.RGBtoLAB();
-    //Image imgCompressee = imgOUTLAB.compressionParQuantification(6);
-    //Image imgCompresseeRGB = imgCompressee.LABtoRGB();
-    //imgCompresseeRGB.write(outputFilenameQuantification);
-
-//    //calcul PSNR
-    //cout << "PSNR : " << img.PSNR(imgCompresseeRGB)  << " dB" << endl;
-
+    //création de la courbe de distortion pour afficher le PSNR en fonction de nBit lors de la compression par quantification d'espace de chrominnance
     imgOUT.genererCourbeDistortion(img, outputFilename);
-
 
 
 }

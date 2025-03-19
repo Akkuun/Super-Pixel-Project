@@ -661,6 +661,8 @@ void Image::genererCourbeDistortion(Image &img, const string &outputFilenameBase
     for (int nBit = 1; nBit <= 8; ++nBit) {
         Image imgCompressee = imgLAB.compressionParQuantification(nBit);
         Image imgCompresseeRGB = imgCompressee.LABtoRGB();
+        //écrire l'image compressée obtenue
+        imgCompresseeRGB.write(outputFilenameBase + "_nBit" + to_string(nBit) + ".ppm");
         float psnr = img.PSNR(imgCompresseeRGB);
         dataFile << nBit << " " << psnr << endl;
     }
