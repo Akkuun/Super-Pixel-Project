@@ -52,7 +52,7 @@ public:
     float calculerTauxCompression(Image &imageCompressee);
     Image compressionParQuantification(int nBit);
     float calculerEntropieImage();
-    void genererCourbeDistortion(Image &img, const string &outputFilenameBase);
+    void genererCourbeDistortion(Image &imgSLICC, const string &outputFilenameBase, Image &imgDeBase);
 private:
     string filename;
     Format format;

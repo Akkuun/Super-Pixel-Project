@@ -651,19 +651,18 @@ float Image::calculerEntropieImage() {
     return -entropie;
 }
 
-void Image::genererCourbeDistortion(Image &img, const string &outputFilenameBase) {
+void Image::genererCourbeDistortion(Image &imgSLICC, const string &outputFilenameBase, Image &imgDeBase) {
     ofstream dataFile(outputFilenameBase + ".dat");
     if (!dataFile.is_open()) {
         cerr << "Erreur lors de l'ouverture du fichier de données pour la courbe de distortion." << endl;
         return;
     }
-    Image imgLAB = img.RGBtoLAB();
     for (int nBit = 1; nBit <= 8; ++nBit) {
-        Image imgCompressee = imgLAB.compressionParQuantification(nBit);
+        Image imgCompressee = imgSLICC.compressionParQuantification(nBit);
         Image imgCompresseeRGB = imgCompressee.LABtoRGB();
         //écrire l'image compressée obtenue
         imgCompresseeRGB.write(outputFilenameBase + "_nBit" + to_string(nBit) + ".ppm");
-        float psnr = img.PSNR(imgCompresseeRGB);
+        float psnr = imgDeBase.PSNR(imgCompresseeRGB);
         dataFile << nBit << " " << psnr << endl;
     }
 
