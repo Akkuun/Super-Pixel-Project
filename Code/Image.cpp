@@ -7,6 +7,7 @@
 #include <queue>
 #include <omp.h>
 #include <climits>
+#include <fstream>
 
 using namespace std;
 
@@ -591,14 +592,95 @@ float Image::PSNR(Image &imageTraitee) {
 }
 
 
-/**
- * \brief calcule le taux de compression entre l'image originale et l'image compressée
- * @param imageCompressee
- * @return
- */
 float Image::calculerTauxCompression(Image &imageCompressee) {
-    return (height * width) / (imageCompressee.height * imageCompressee.width);
+    float entropieOriginale = this->calculerEntropieImage();
+    cout << "Entropie originale : " << entropieOriginale << " bit/pixels" << endl;
+    float entropieCompressee = imageCompressee.calculerEntropieImage();
+    cout << "Entropie compressee : " << entropieCompressee << " bit/pixels" << endl;
+    return entropieCompressee / entropieOriginale;
 }
 
+/**
+ * \brief crée une image compressée par quantification des couleurs RGB
+ * @param nBit
+ * @return une image compressée par quantification
+ */
+Image Image::compressionParQuantification(int nBit) {
+    cout << "Début de la compression par quantification" << endl;
+    int levels = pow(2, nBit);
+    int step = 256 / levels;
 
+    OCTET *dataCompressed = createData();
 
+    for (int i = 0; i < size; i += 3) {
+        dataCompressed[i] = data[i]; // Luminance remains unchanged
+        dataCompressed[i + 1] = (data[i + 1] / step) * step; // Quantize a
+        dataCompressed[i + 2] = (data[i + 2] / step) * step; // Quantize b
+    }
+
+    Image imgCompressed(filename, format);
+    imgCompressed.width = width;
+    imgCompressed.height = height;
+    imgCompressed.size = size;
+    imgCompressed.data = copyData(dataCompressed, size);
+
+    free(dataCompressed);
+
+    cout << "Fin de la compression par quantification" << endl;
+    return imgCompressed;
+}
+
+/**
+ * \brief Calcule l'entropie de l'image.
+ * \return L'entropie de l'image.
+ */
+float Image::calculerEntropieImage() {
+    float entropie = 0.0f;
+    int histogramme[256] = {0};
+
+    for (int i = 0; i < size; i++) {
+        histogramme[data[i]]++;
+    }
+
+    for (int i = 0; i < 256; i++) {
+        if (histogramme[i] != 0) {
+            float proba = (float) histogramme[i] / size;
+            entropie += proba * log2(proba);
+        }
+    }
+    return -entropie;
+}
+
+void Image::genererCourbeDistortion(Image &img, const string &outputFilenameBase) {
+    ofstream dataFile(outputFilenameBase + ".dat");
+    if (!dataFile.is_open()) {
+        cerr << "Erreur lors de l'ouverture du fichier de données pour la courbe de distortion." << endl;
+        return;
+    }
+    Image imgLAB = img.RGBtoLAB();
+    for (int nBit = 1; nBit <= 8; ++nBit) {
+        Image imgCompressee = imgLAB.compressionParQuantification(nBit);
+        Image imgCompresseeRGB = imgCompressee.LABtoRGB();
+        float psnr = img.PSNR(imgCompresseeRGB);
+        dataFile << nBit << " " << psnr << endl;
+    }
+
+    dataFile.close();
+
+    ofstream gnuplotScript(outputFilenameBase + ".plt");
+    if (!gnuplotScript.is_open()) {
+        cerr << "Erreur lors de l'ouverture du fichier de script GNUPLOT." << endl;
+        return;
+    }
+
+    gnuplotScript << "set terminal png size 800,600\n";
+    gnuplotScript << "set output '" << outputFilenameBase << ".png'\n";
+    gnuplotScript << "set title 'PSNR en fonction de nBit'\n";
+    gnuplotScript << "set xlabel 'nBit'\n";
+    gnuplotScript << "set ylabel 'PSNR (dB)'\n";
+    gnuplotScript << "plot '" << outputFilenameBase << ".dat' using 1:2 with lines title 'PSNR'\n";
+
+    gnuplotScript.close();
+
+    system(("gnuplot " + outputFilenameBase + ".plt").c_str());
+}

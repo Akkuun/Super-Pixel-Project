@@ -50,7 +50,9 @@ public:
                                  vector<int> &labels,
                                  int &tailleSeuilMinimal, vector <ClusterCenter> &clusters);
     float calculerTauxCompression(Image &imageCompressee);
-
+    Image compressionParQuantification(int nBit);
+    float calculerEntropieImage();
+    void genererCourbeDistortion(Image &img, const string &outputFilenameBase);
 private:
     string filename;
     Format format;
