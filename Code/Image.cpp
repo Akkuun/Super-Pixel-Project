@@ -545,23 +545,23 @@ void Image::SLICC(int &k, int &m, int &N, bool &contour) {
     }
     cout << "fin de la correction de la connectivié via floodFill" << endl;
     cout << "debut fusion des petis segments" << endl;
-// 4.2 Fusionner les petits segments
-    int tailleSeuilMinimal = size / (3 * k);
-    for (int i = 0; i < height; i++) {
-        for (int j = 0; j < width; j++) {
-            int index = getIndice(i, j, height, width);
-            // Affecter au superpixel voisin le plus proche
-            int bestLabel = affecterSuperPixelVoisin(i, j, newLabels, listeComposantesConnexes, labels,
-                                                     tailleSeuilMinimal, clusters);
-            // si le pixel n'est pas affecté à un superpixel voisin, on le laisse tel quel
-            if (bestLabel != -1) {
-                newLabels[index] = bestLabel;
-            }
-        }
-    }
-    cout << "fin fusion des petis segments" << endl;
-    // Mettre à jour les labels
-    labels = newLabels;
+//// 4.2 Fusionner les petits segments TODO A DECOMMENTER POUR FLOOD FILL
+//    int tailleSeuilMinimal = size / (3 * k);
+//    for (int i = 0; i < height; i++) {
+//        for (int j = 0; j < width; j++) {
+//            int index = getIndice(i, j, height, width);
+//            // Affecter au superpixel voisin le plus proche
+//            int bestLabel = affecterSuperPixelVoisin(i, j, newLabels, listeComposantesConnexes, labels,
+//                                                     tailleSeuilMinimal, clusters);
+//            // si le pixel n'est pas affecté à un superpixel voisin, on le laisse tel quel
+//            if (bestLabel != -1) {
+//                newLabels[index] = bestLabel;
+//            }
+//        }
+//    }
+//    cout << "fin fusion des petis segments" << endl;
+//    // Mettre à jour les labels
+//    labels = newLabels;
 
     // PHASE 5 : Coloration des superpixels
     //5.1 Colorer les superpixels avec la moyenne des couleurs de leurs pixels.
