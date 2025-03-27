@@ -22,6 +22,12 @@ void SLICC(int argc, char *argv[]) {
     int k = 6000; // Nombre de clusters
     int m = 30; //résolution spatiale
     int N = img.getSize();
+
+    // Courbe PSNR
+    cout << "Debut Courbe PSNR" << endl;
+    img.genererCourbePSNR(imgLAB,img,k, 10, 50, N);
+    cout << "Fin Courbe PSNR" << endl;
+
     //SLICC
     imgLAB.SLICC(k, m, N , contour);
     imgLAB.write(outputFilename);
@@ -34,4 +40,3 @@ void SLICC(int argc, char *argv[]) {
     imgOUT.genererCourbeDistortion(imgOUTLAB, outputFilename,img);
 
 }
-

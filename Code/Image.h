@@ -54,6 +54,7 @@ public:
     float calculerEntropieImage();
     void genererCourbeDistortion(Image &imgSLICC, const string &outputFilenameBase, Image &imgDeBase);
     void highlightContours(const vector<int> &labels);
+    void genererCourbePSNR(Image &imgLAB, Image &imgDeBase, int K, int minM, int maxM, int N);
 private:
     string filename;
     Format format;
