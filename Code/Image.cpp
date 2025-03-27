@@ -694,7 +694,7 @@ void Image::genererCourbeDistortion(Image &imgSLICC, const string &outputFilenam
     gnuplotScript.close();
 
 
-    if(system(("gnuplot " + outputFilenameBase + ".plt").c_str()) == -1){
+    if (system(("gnuplot " + outputFilenameBase + ".plt").c_str()) == -1) {
         cerr << "Erreur lors de l'exécution de gnuplot." << endl;
     }
 }
@@ -730,16 +730,18 @@ void Image::highlightContours(const vector<int> &labels) {
 
     // 5.2.3 Mettre en évidence les contours
     memcpy(imgHighligthContours.data, data, size * sizeof(OCTET));
-    for (int i = 0; i < size / 3; i++) {
-        if (contours[i] == 1) {
-            imgHighligthContours.data[i * 3] = data[i * 3];
-            imgHighligthContours.data[i * 3 + 1] = data[i * 3 + 1];
-            imgHighligthContours.data[i * 3 + 2] = data[i * 3 + 2];
-        }
-        else{
-            imgHighligthContours.data[i * 3] = 255;
-            imgHighligthContours.data[i * 3 + 1] = 255;
-            imgHighligthContours.data[i * 3 + 2] = 255;
+    for (int i = 0; i < height; i++) {
+        for (int j = 0; j < width; j++) {
+            int index = getIndice(i, j, height, width);
+            if (contours[index] == 1) {
+                imgHighligthContours.data[index * 3] = data[index * 3];
+                imgHighligthContours.data[index * 3 + 1] = data[index * 3 + 1];
+                imgHighligthContours.data[index * 3 + 2] = data[index * 3 + 2];
+            } else {
+                imgHighligthContours.data[index * 3] = 255;
+                imgHighligthContours.data[index * 3 + 1] = 255;
+                imgHighligthContours.data[index * 3 + 2] = 255;
+            }
         }
     }
     ecrire_image_ppm(const_cast<char *>((filename.substr(0, filename.find_last_of('.')) + "_contours.ppm").c_str()),
