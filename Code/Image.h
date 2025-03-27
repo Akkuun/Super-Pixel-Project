@@ -37,7 +37,7 @@ public:
     float PSNR(Image &imageTraitee);
 
     //fonctions de traitement
-    void SLICC(int &k, int &m, int &N);
+    void SLICC(int &k, int &m, int &N, bool &contour);
     Image RGBtoLAB();
     Image LABtoRGB();
     float calculerDistanceCouleur(ClusterCenter &cluster, int &i, int &j);
@@ -53,6 +53,7 @@ public:
     Image compressionParQuantification(int nBit);
     float calculerEntropieImage();
     void genererCourbeDistortion(Image &imgSLICC, const string &outputFilenameBase, Image &imgDeBase);
+    void highlightContours(const vector<int> &labels);
 private:
     string filename;
     Format format;

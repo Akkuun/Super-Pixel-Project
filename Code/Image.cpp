@@ -137,6 +137,11 @@ OCTET *Image::copyData(const OCTET *data, int size) {
  * \return Un pointeur vers le nouveau tableau alloué.
  */
 OCTET *Image::createData() {
+    if (size <= 0 || static_cast<unsigned int>(size) > INT_MAX / sizeof(OCTET)) {
+        std::cerr << "Erreur: taille de l'image invalide ou trop grande pour l'allocation de mémoire." << std::endl;
+        exit(EXIT_FAILURE);
+    }
+
     OCTET *newData = (OCTET *) malloc(size * sizeof(OCTET));
     if (newData == nullptr) {
         std::cerr << "Erreur d'allocation de mémoire pour la copie des données de l'image." << std::endl;
@@ -437,7 +442,7 @@ int Image::affecterSuperPixelVoisin(int x, int y, vector<int> &newLabels, vector
  * \param m Paramètre de compacité.
  * \param N Nombre de pixels de l'image.
  */
-void Image::SLICC(int &k, int &m, int &N) {
+void Image::SLICC(int &k, int &m, int &N, bool &contour) {
     // PHASE 1 : Initialisation
     //1.1 Convertir l’image RGB en CIELab. -> ok
     //1.2 Définir le nombre de superpixels souhaité et calculer le pas de grille avec S = sqrt(N / k).
@@ -570,6 +575,11 @@ void Image::SLICC(int &k, int &m, int &N) {
             data[index * 3 + 2] = clusters[cluster].bk;
         }
     }
+    if (contour) {
+        this->highlightContours(labels);
+    }
+
+
     cout << "Fin SLICC" << endl;
 }
 
@@ -683,5 +693,56 @@ void Image::genererCourbeDistortion(Image &imgSLICC, const string &outputFilenam
 
     gnuplotScript.close();
 
-    system(("gnuplot " + outputFilenameBase + ".plt").c_str());
+
+    if(system(("gnuplot " + outputFilenameBase + ".plt").c_str()) == -1){
+        cerr << "Erreur lors de l'exécution de gnuplot." << endl;
+    }
+}
+
+void Image::highlightContours(const vector<int> &labels) {
+    cout << "debut highligth des contours" << endl;
+    // 5.2 Mettre en évidence les contours des superpixels
+    // 5.2.1 Initialiser les valeurs des contours
+    vector<int> contours(size / 3, 0);
+    // 5.2.2 Parcourir l'image pour détecter les contours
+    for (int i = 0; i < height; i++) {
+        for (int j = 0; j < width; j++) {
+            int index = getIndice(i, j, height, width);
+            for (int dx = -1; dx <= 1; dx++) {
+                for (int dy = -1; dy <= 1; dy++) {
+                    int nx = i + dx;
+                    int ny = j + dy;
+                    if (nx >= 0 && nx < height && ny >= 0 && ny < width) {
+                        int nIndex = getIndice(nx, ny, height, width);
+                        if (labels[index] != labels[nIndex]) {
+                            contours[index] = 1;
+                        }
+                    }
+                }
+            }
+        }
+    }
+    Image imgHighligthContours(filename, PPM);
+    imgHighligthContours.width = width;
+    imgHighligthContours.height = height;
+    imgHighligthContours.size = size;
+    imgHighligthContours.data = createData();
+
+    // 5.2.3 Mettre en évidence les contours
+    memcpy(imgHighligthContours.data, data, size * sizeof(OCTET));
+    for (int i = 0; i < size / 3; i++) {
+        if (contours[i] == 1) {
+            imgHighligthContours.data[i * 3] = data[i * 3];
+            imgHighligthContours.data[i * 3 + 1] = data[i * 3 + 1];
+            imgHighligthContours.data[i * 3 + 2] = data[i * 3 + 2];
+        }
+        else{
+            imgHighligthContours.data[i * 3] = 255;
+            imgHighligthContours.data[i * 3 + 1] = 255;
+            imgHighligthContours.data[i * 3 + 2] = 255;
+        }
+    }
+    ecrire_image_ppm(const_cast<char *>((filename.substr(0, filename.find_last_of('.')) + "_contours.ppm").c_str()),
+                     imgHighligthContours.data, height, width);
+    cout << "fin highligth des contours" << endl;
 }
