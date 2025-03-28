@@ -47,8 +47,7 @@ public:
                           float &newb, float &newx, float &newy, float &newDeltaCk);
     int floodFill(int x, int y, vector<int> &newLabels, int &label, vector<int> &labels);
     int affecterSuperPixelVoisin(int x, int y, vector<int> &newLabels, vector<int> &listeComposantesConnexes,
-                                 vector<int> &labels,
-                                 int &tailleSeuilMinimal, vector <ClusterCenter> &clusters);
+                                 vector<int> &labels, vector <ClusterCenter> &clusters);
     float calculerTauxCompression(Image &imageCompressee);
     Image compressionParQuantification(int nBit);
     float calculerEntropieImage();

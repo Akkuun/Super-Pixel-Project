@@ -332,12 +332,25 @@ float Image::calculerDistanceSpatiale(ClusterCenter &cluster, int x, int y) {
  * \param newy Nouvelle position y du centre.
  * \param newDeltaCk Nouveau deltaCk.
  */
-void Image::calculerNouveauCentre(vector <ClusterCenter> &clusters, vector<int> &labels, int cluster, float &newL,
-                                  float &newa,
-                                  float &newb, float &newx, float &newy, float &newDeltaCk) {
+void Image::calculerNouveauCentre(vector<ClusterCenter> &clusters, vector<int> &labels, int cluster, float &newL,
+    float &newa, float &newb, float &newx, float &newy, float &newDeltaCk) {
+    if (cluster < 0 || cluster >= clusters.size()) return; // Vérification des limites
+
     float sumL = 0, suma = 0, sumb = 0, sumx = 0, sumy = 0;
     int nbPixels = 0;
-    for (int i = 0; i < height*width; i++) {
+
+    // Initialisation sécurisée pour éviter les valeurs indéfinies
+    newL = clusters[cluster].Lk;
+    newa = clusters[cluster].ak;
+    newb = clusters[cluster].bk;
+    newx = clusters[cluster].xk;
+    newy = clusters[cluster].yk;
+    newDeltaCk = 0;
+
+    int totalPixels = width * height;
+    if (labels.size() != totalPixels) return; // Vérification cohérence labels
+
+    for (int i = 0; i < totalPixels; i++) {
         if (labels[i] == cluster) {
             sumL += data[i * 3];
             suma += data[i * 3 + 1];
@@ -347,8 +360,10 @@ void Image::calculerNouveauCentre(vector <ClusterCenter> &clusters, vector<int> 
             nbPixels++;
         }
     }
-    if (nbPixels == 0) return;
 
+    if (nbPixels == 0) return; // Évite une division par zéro
+
+    // Mise à jour des centres
     newL = sumL / nbPixels;
     newa = suma / nbPixels;
     newb = sumb / nbPixels;
@@ -373,7 +388,9 @@ void Image::calculerNouveauCentre(vector <ClusterCenter> &clusters, vector<int> 
 int Image::floodFill(int x, int y, vector<int> &newLabels, int &label, vector<int> &labels) {
     queue <pair<int, int>> q;
     q.push({x, y});
+
     int index = getIndice(x, y, height, width);
+    if (index < 0 || index >= newLabels.size()) return 0; // Éviter accès hors limites
     newLabels[index] = label;
     int size = 0;
 
@@ -401,6 +418,7 @@ int Image::floodFill(int x, int y, vector<int> &newLabels, int &label, vector<in
 }
 
 
+
 /**
  * \brief Affecte un superpixel voisin à un pixel si sa composante connexe est trop petite.
  * @param x la coordonnée x du pixel
@@ -413,7 +431,7 @@ int Image::floodFill(int x, int y, vector<int> &newLabels, int &label, vector<in
  * @return le label du superpixel voisin
  */
 int Image::affecterSuperPixelVoisin(int x, int y, vector<int> &newLabels, vector<int> &listeComposantesConnexes,
-                                    vector<int> &labels, int &tailleSeuilMinimal, vector <ClusterCenter> &clusters) {
+                                    vector<int> &labels, vector <ClusterCenter> &clusters) {
     float minDistance = INFINITY;
     int bestLabel = -1;
 
@@ -423,7 +441,7 @@ int Image::affecterSuperPixelVoisin(int x, int y, vector<int> &newLabels, vector
             int ny = y + dy;
             if (nx >= 0 && nx < height && ny >= 0 && ny < width) {
                 int nIndex = getIndice(nx, ny, height, width);
-                if (newLabels[nIndex] != newLabels[getIndice(x, y, height, width)]) {
+                if (nIndex >= 0 && nIndex < newLabels.size() && newLabels[nIndex] != -1) {
                     float distance = calculerDistanceCouleur(clusters[newLabels[nIndex]], x, y);
                     if (distance < minDistance) {
                         minDistance = distance;
@@ -502,7 +520,7 @@ void Image::SLICC(int &k, int &m, int &N, bool &contour) {
                         int index = getIndice(y, x, height, width);
                         float dC = calculerDistanceCouleur(clusters[i], y, x);
                         float dS = calculerDistanceSpatiale(clusters[i], y, x);
-                        float D = sqrt(pow(dC / m, 2) + pow(dS / S, 2));
+                        float D = dC + (m / S) * dS;
                         
                         if (D < distances[index]) {
                             distances[index] = D;
@@ -556,8 +574,7 @@ void Image::SLICC(int &k, int &m, int &N, bool &contour) {
         for (int j = 0; j < width; j++) {
             int index = getIndice(i, j, height, width);
             // Affecter au superpixel voisin le plus proche
-            int bestLabel = affecterSuperPixelVoisin(i, j, newLabels, listeComposantesConnexes, labels,
-                                                     tailleSeuilMinimal, clusters);
+            int bestLabel = affecterSuperPixelVoisin(i, j, newLabels, listeComposantesConnexes, labels, clusters);
             // si le pixel n'est pas affecté à un superpixel voisin, on le laisse tel quel
             if (bestLabel != -1) {
                 newLabels[index] = bestLabel;
