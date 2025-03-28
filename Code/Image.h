@@ -40,8 +40,8 @@ public:
     void SLICC(int &k, int &m, int &N, bool &contour);
     Image RGBtoLAB();
     Image LABtoRGB();
-    float calculerDistanceCouleur(ClusterCenter &cluster, int &i, int &j);
-    float calculerDistanceSpatiale(ClusterCenter &cluster, int &i, int &j);
+    float calculerDistanceCouleur(ClusterCenter &cluster, int i, int j);
+    float calculerDistanceSpatiale(ClusterCenter &cluster, int i, int j);
     void
     calculerNouveauCentre(vector <ClusterCenter> &clusters, vector<int> &labels, int cluster, float &newL, float &newa,
                           float &newb, float &newx, float &newy, float &newDeltaCk);

@@ -21,8 +21,8 @@ void SLICC(int argc, char *argv[]) {
     //conversion en LAB
     Image imgLAB = img.RGBtoLAB();
     imgLAB.write(outputFilename);
-    int k = 23000; // Nombre de clusters
-    int m = 60; //résolution spatiale
+    int k = 5000; // Nombre de clusters
+    int m = 30; //résolution spatiale
     int N = img.getSize();
 
     // Courbe PSNR

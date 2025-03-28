@@ -296,7 +296,7 @@ Image Image::LABtoRGB() {
  * \param j Coordonnée y du pixel.
  * \return La distance entre le pixel et le cluster.
  */
-float Image::calculerDistanceCouleur(ClusterCenter &cluster, int &i, int &j) {
+float Image::calculerDistanceCouleur(ClusterCenter &cluster, int i, int j) {
     // Calcul de la distance couleur
     int index = getIndice(i, j, height, width) * 3;
     float dL = cluster.Lk - data[index];
@@ -313,11 +313,11 @@ float Image::calculerDistanceCouleur(ClusterCenter &cluster, int &i, int &j) {
  * \param j Coordonnée y du pixel.
  * \return La distance spatiale entre le pixel et le cluster.
  */
-float Image::calculerDistanceSpatiale(ClusterCenter &cluster, int &i, int &j) {
+float Image::calculerDistanceSpatiale(ClusterCenter &cluster, int x, int y) {
     // Calcul de la distance spatiale
-    float dx = cluster.xk - i;
-    float dy = cluster.yk - j;
-    return sqrt(dx * dx + dy * dy);
+    // float dx = cluster.xk - i;
+    // float dy = cluster.yk - j;
+    return sqrt(pow(cluster.xk - x, 2) + pow(cluster.yk - y, 2));
 }
 
 /**
@@ -337,7 +337,7 @@ void Image::calculerNouveauCentre(vector <ClusterCenter> &clusters, vector<int> 
                                   float &newb, float &newx, float &newy, float &newDeltaCk) {
     float sumL = 0, suma = 0, sumb = 0, sumx = 0, sumy = 0;
     int nbPixels = 0;
-    for (int i = 0; i < size / 3; i++) {
+    for (int i = 0; i < height*width; i++) {
         if (labels[i] == cluster) {
             sumL += data[i * 3];
             suma += data[i * 3 + 1];
@@ -400,6 +400,7 @@ int Image::floodFill(int x, int y, vector<int> &newLabels, int &label, vector<in
     return size;
 }
 
+
 /**
  * \brief Affecte un superpixel voisin à un pixel si sa composante connexe est trop petite.
  * @param x la coordonnée x du pixel
@@ -450,22 +451,26 @@ void Image::SLICC(int &k, int &m, int &N, bool &contour) {
     float S = sqrt(static_cast<float>(N) / k);
     cout << "Initialisation des centres de clusters" << endl;
     //1.3 Placer les centres de clusters Ck sur une grille régulière (avec un léger ajustement pour éviter les bords).
-    vector <ClusterCenter> clusters(k);
-    for (int clusterActuel = 0; clusterActuel < k; clusterActuel++) {
-        // x et y sont les coordonnées du centre du cluster au sein de la grille S
-        // on place les centres des clusters sur la grille régulière S et on ajoute un pas de S/2 pour les placer au centre
+    vector <ClusterCenter> clusters;
 
-        int cols = static_cast<int>(width / S);
-        int x = static_cast<int>((S / 2) + (clusterActuel % cols) * S);
-        int y = static_cast<int>((S / 2) + (clusterActuel / cols) * S);
-        clusters[clusterActuel].xk = x;
-        clusters[clusterActuel].yk = y;
-        // on met dans le cluster les valeurs de couleur du pixel L a b
-        int index = getIndice(y, x, height, width);
-        clusters[clusterActuel].Lk = data[index * 3];
-        clusters[clusterActuel].ak = data[index * 3 + 1];
-        clusters[clusterActuel].bk = data[index * 3 + 2];
+    int indexCluster=0;
+    for (int y = S / 2; y < height; y += S) {
+        for (int x = S / 2; x < width; x += S) {
+            // x et y sont les coordonnées du centre du cluster au sein de la grille S
+            // on place les centres des clusters sur la grille régulière S et on ajoute un pas de S/2 pour les placer au centre
+            
+            int index=getIndice(x,y,height,width);
+            ClusterCenter clusterActuel;
+            clusterActuel.xk=x;
+            clusterActuel.yk=y;
+            // on met dans le cluster les valeurs de couleur du pixel L a b
+            clusterActuel.Lk=data[index*3];
+            clusterActuel.ak=data[index*3+1];
+            clusterActuel.bk=data[index*3+2];
+            clusters.push_back(clusterActuel);
+        }
     }
+
     cout << "fin initilisation des centres de clusters" << endl;
 
     //1.4 Initialiser la matrice des labels (indices des centres)  L(x, y) à -1 et la matrice des distances   D(x, y) à INF
@@ -474,7 +479,7 @@ void Image::SLICC(int &k, int &m, int &N, bool &contour) {
     vector<float> distances(width * height, INFINITY);
 
     //1.5 Initialiser le seuil de convergence ΔCk
-    float seuil = 0.00001;
+    float seuil = 0.1;
     float deltaCk = 0;
     float lastDeltaCk = INFINITY;
     int iteration = 0;
@@ -486,23 +491,22 @@ void Image::SLICC(int &k, int &m, int &N, bool &contour) {
         iteration += 1;
         //2.1 Pour chaque centre de cluster C_k
 #pragma omp parallel for
-        for (int cluster = 0; cluster < k; cluster++) {
+        for (int i = 0; i < clusters.size(); i++) {
             //2.2 Pour chaque pixel P(x, y) dans une fenêtre 2S x 2S autour de C_k
-            for (int dx = -S; dx <= S; dx++) {
-                for (int dy = -S; dy <= S; dy++) {
+            for (int dy = -S; dy <= S; dy++) {
+                for (int dx = -S; dx <= S; dx++) {
                     //2.3 Calculer la distance D(P, C_k) entre le pixel P et le centre C_k
-                    int x = clusters[cluster].xk + dx;
-                    int y = clusters[cluster].yk + dy;
-
+                    int x = clusters[i].xk + dx;
+                    int y = clusters[i].yk + dy;
                     if (x >= 0 && x < width && y >= 0 && y < height) {
                         int index = getIndice(y, x, height, width);
-                        float d_lab = calculerDistanceCouleur(clusters[cluster], x, y);
-                        float d_xy = calculerDistanceSpatiale(clusters[cluster], x, y);
-                        float D = d_lab + (m / S) * d_xy;
-
+                        float dC = calculerDistanceCouleur(clusters[i], y, x);
+                        float dS = calculerDistanceSpatiale(clusters[i], y, x);
+                        float D = sqrt(pow(dC / m, 2) + pow(dS / S, 2));
+                        
                         if (D < distances[index]) {
                             distances[index] = D;
-                            labels[index] = cluster;
+                            labels[index] = i;
                         }
                     }
                 }
