@@ -56,6 +56,7 @@ public:
     void highlightContours(const vector<int> &labels);
     Image TurboPixel(int &k);
     int calculer_norme_gradian(int i, int j);
+    void genererCourbePSNR(Image &imgLAB, Image &imgDeBase, int K, int minM, int maxM, int N);
 private:
     string filename;
     Format format;

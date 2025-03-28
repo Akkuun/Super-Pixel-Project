@@ -903,3 +903,40 @@ int Image::calculer_norme_gradian(int i, int j) {
     }
     return sqrt(dx * dx + dy * dy);
 }
+
+void Image::genererCourbePSNR(Image &imgLAB, Image &imgDeBase, int K, int minM, int maxM, int N){
+    double PSNR=0.;
+    bool contour=false;
+    string curbName="./CourbePSNR"+std::to_string(K)+".dat";
+    ofstream dataFile(curbName);
+    if (!dataFile.is_open()) {
+        cerr << "Erreur lors de l'ouverture du fichier de données pour la courbe de distortion." << endl;
+        return;
+    }
+    for (int m=minM; m<=maxM; m+=10){
+        //dataFile << m ;
+        cout << "m=" << m <<endl;
+        Image imgSLICC=imgDeBase.RGBtoLAB();
+        imgSLICC.SLICC(K,m,N,contour);
+        Image imgComp=imgSLICC.LABtoRGB();
+        PSNR=imgDeBase.PSNR(imgComp);
+        cout << "PSNR=" << PSNR <<endl;
+        dataFile << m << ' ' << PSNR << ' ' << endl;
+    }
+
+    ofstream gnuplotScript("./CourbePSNR"+std::to_string(K)+".plt");
+    if (!gnuplotScript.is_open()) {
+        cerr << "Erreur lors de l'ouverture du fichier de script GNUPLOT." << endl;
+        return;
+    }
+    gnuplotScript << "set terminal png size 800,600\n";
+    gnuplotScript << "set output '" << "CourbePSNR" << ".png'\n";
+    gnuplotScript << "set title 'PSNR en fonction de K et N'\n";
+    gnuplotScript << "set xlabel 'M'\n";
+    gnuplotScript << "set ylabel 'PSNR (dB)'\n";
+    gnuplotScript << "plot '" << curbName << "' with lines title 'PSNR en Fonction pour k=" << std::to_string(K)<< "'\n";
+
+    gnuplotScript.close();
+
+    system(("gnuplot ./CourbePSNR" + std::to_string(K) + ".plt").c_str());
+}
