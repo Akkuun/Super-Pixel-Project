@@ -700,6 +700,10 @@ void Image::genererCourbeDistortion(Image &imgSLICC, const string &outputFilenam
     }
 }
 
+/**
+ * \brief Met en évidence les contours des superpixels dans l'image.
+ * @param labels Liste des labels des pixels.
+ */
 void Image::highlightContours(const vector<int> &labels) {
     cout << "debut highligth des contours" << endl;
     // 5.2 Mettre en évidence les contours des superpixels
@@ -750,181 +754,150 @@ void Image::highlightContours(const vector<int> &labels) {
     cout << "fin highligth des contours" << endl;
 }
 
-Image Image::TurboPixel(int &k) {
+
+/**
+ * \brief Applique l'algorithme TurboPixel sur l'image LAB
+ * \param k Nombre de superpixels souhaité
+ * \return Retourne une image avec les superpixels LAB
+ */
+Image Image::TurboPixel(int &k, Image &imgGRIS) {
     Image imgTurboPixel(filename, format);
     imgTurboPixel.width = width;
     imgTurboPixel.height = height;
     imgTurboPixel.size = size;
     imgTurboPixel.data = createData();
 
-
-    //1. Initialiser un ensemble de graines de superpixels régulièrement espacées
-    vector <pair<int, int>> seeds;
-    int step = static_cast<int>(sqrt(static_cast<float>(size) / k));
+    // 1. Initialiser un ensemble de graines de superpixels régulièrement espacées
+    vector<pair<int, int>> seeds;
+    int step = static_cast<int>(sqrt(static_cast<float>(width * height) / k));
     for (int y = step / 2; y < height; y += step) {
         for (int x = step / 2; x < width; x += step) {
             seeds.emplace_back(x, y);
         }
     }
 
-
-
-
-    //2. Générer une carte des gradients de l'image
-    Image carteGradient(filename, PGM);
-    carteGradient.width = width;
-    carteGradient.height = height;
-    carteGradient.size = size;
-    carteGradient.data = createData();
-
-    vector<float> gradients(size, 0.0f);
+    // 2. Calculer le gradient de l'image
+    Image imgGradient(filename, PGM);
+    imgGradient.width = width;
+    imgGradient.height = height;
+    imgGradient.size = size;
+    imgGradient.data = createData();
 
     for (int i = 0; i < height; i++) {
         for (int j = 0; j < width; j++) {
             int index = getIndice(i, j, height, width);
-            int gradianVal = calculer_norme_gradian(i, j);
-            gradients[index] = gradianVal;
-            carteGradient.data[index] = gradianVal;
+            imgGradient.data[index] = calculer_norme_gradian(i, j,imgGRIS);
         }
     }
+    string fileName = filename.substr(0, filename.find_last_of('.')) + "_gradient.pgm";
+    imgGradient.write(fileName);
 
-    //3. Construire une fonction de diffusion de région :
-    //    a. Pour chaque graine, attribuer une région initiale
-    //    b. Propager progressivement les régions en fonction des gradients
-    //    c. Mettre à jour la frontière des régions pour éviter des chevauchements
-    vector<int> regionLabels(size, -1);
-    queue <pair<int, int>> regionQueue;
-
-    for (const auto &seed: seeds) {
+    // 3. Ajuster les graines vers les zones de fort gradient
+    for (auto &seed : seeds) {
         int x = seed.first;
         int y = seed.second;
-        int index = getIndice(y, x, height, width);
-        regionLabels[index] = index;
-        regionQueue.push({x, y});
-    }
+        int bestX = x, bestY = y;
+        int minGradient = imgGradient.data[getIndice(y, x, height, width)];
 
-    while (!regionQueue.empty()) {
-        auto [x, y] = regionQueue.front();
-        regionQueue.pop();
-        int index = getIndice(y, x, height, width);
-
-        for (int dx = -1; dx <= 1; dx++) {
-            for (int dy = -1; dy <= 1; dy++) {
-                int nx = x + dx;
-                int ny = y + dy;
-                if (nx >= 0 && nx < width && ny >= 0 && ny < height) {
-                    int nIndex = getIndice(ny, nx, height, width);
-                    if (regionLabels[nIndex] == -1 && gradients[nIndex] < gradients[index]) {
-                        regionLabels[nIndex] = regionLabels[index];
-                        regionQueue.push({nx, ny});
-                    }
-                }
-            }
-        }
-    }
-    //4. Adjust the boundaries with energy optimization to maintain regularity
-    for (int i = 0; i < height; i++) {
-        for (int j = 0; j < width; j++) {
-            int index = getIndice(i, j, height, width);
+        for (int dy = -1; dy <= 1; dy++) {
             for (int dx = -1; dx <= 1; dx++) {
-                for (int dy = -1; dy <= 1; dy++) {
-                    int nx = i + dx;
-                    int ny = j + dy;
-                    if (nx >= 0 && nx < height && ny >= 0 && ny < width) {
-                        int nIndex = getIndice(nx, ny, height, width);
-                        if (regionLabels[nIndex] != regionLabels[index]) {
-                            float energy = gradients[nIndex] + gradients[index];
-                            if (energy < gradients[index]) {
-                                regionLabels[index] = regionLabels[nIndex];
-                            }
-                        }
+                int newX = x + dx;
+                int newY = y + dy;
+                if (newX >= 0 && newX < width && newY >= 0 && newY < height) {
+                    int newGradient = imgGradient.data[getIndice(newY, newX, height, width)];
+                    if (newGradient < minGradient) {
+                        minGradient = newGradient;
+                        bestX = newX;
+                        bestY = newY;
+                    }
+                }
+            }
+        }
+        seed = {bestX, bestY};
+    }
+
+    // 4. Propager les superpixels en utilisant une file de priorité (type croissance de région)
+    vector<int> labels(width * height, -1);
+    queue<pair<int, int>> queuePixels;
+
+    int label = 0;
+    for (const auto &seed : seeds) {
+        queuePixels.push(seed);
+        labels[getIndice(seed.second, seed.first, height, width)] = label++;
+    }
+
+    while (!queuePixels.empty()) {
+        auto [x, y] = queuePixels.front();
+        queuePixels.pop();
+        int currentLabel = labels[getIndice(y, x, height, width)];
+
+        for (int dy = -1; dy <= 1; dy++) {
+            for (int dx = -1; dx <= 1; dx++) {
+                int newX = x + dx;
+                int newY = y + dy;
+                if (newX >= 0 && newX < width && newY >= 0 && newY < height) {
+                    int newIndex = getIndice(newY, newX, height, width);
+                    if (labels[newIndex] == -1) {
+                        labels[newIndex] = currentLabel;
+                        queuePixels.push({newX, newY});
                     }
                 }
             }
         }
     }
 
-    //5. Vérifier la convergence (les régions ne changent plus de manière significative)
-
-    //5. Vérifier la convergence (les régions ne changent plus de manière significative)
-    bool converged = false;
-    while (!converged) {
-        converged = true;
-        for (int i = 0; i < height; i++) {
-            for (int j = 0; j < width; j++) {
-                int index = getIndice(i, j, height, width);
-                for (int dx = -1; dx <= 1; dx++) {
-                    for (int dy = -1; dy <= 1; dy++) {
-                        int nx = i + dx;
-                        int ny = j + dy;
-                        if (nx >= 0 && nx < height && ny >= 0 && ny < width) {
-                            int nIndex = getIndice(nx, ny, height, width);
-                            if (regionLabels[nIndex] != regionLabels[index]) {
-                                float energy = gradients[nIndex] + gradients[index];
-                                if (energy < gradients[index]) {
-                                    regionLabels[index] = regionLabels[nIndex];
-                                    converged = false;
-                                }
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-//6. Sortie : Carte des superpixels
+    // 5. Assigner les couleurs aux superpixels dans l'image finale
     for (int i = 0; i < height; i++) {
         for (int j = 0; j < width; j++) {
-            int index = getIndice(i, j, height, width);
-            int label = regionLabels[index];
-            imgTurboPixel.data[index * 3] = data[label * 3];
-            imgTurboPixel.data[index * 3 + 1] = data[label * 3 + 1];
-            imgTurboPixel.data[index * 3 + 2] = data[label * 3 + 2];
+            int labelIndex = labels[getIndice(i, j, height, width)];
+            imgTurboPixel.data[getIndice(i, j, height, width)] = labelIndex * (255 / k);
         }
     }
-
-    //Generer image de contours
-    this->highlightContours(regionLabels);
-
 
     return imgTurboPixel;
-
 }
 
-int Image::calculer_norme_gradian(int i, int j) {
+/**
+ * \brief Calculer la norme du gradient du pixel (i,j)
+ * \param i : coordonnée x du pixel
+ * \param j : coordonnée y du pixel
+ * \return La norme du gradient
+ */
+int Image::calculer_norme_gradian(int i, int j, Image &imgGRIS) {
     int dx = 0;
     int dy = 0;
+
     if (i > 0 && i < height - 1) {
-        dx = data[getIndice(i + 1, j, height, width)] - data[getIndice(i - 1, j, height, width)];
+        dx = imgGRIS.data[getIndice(i + 1, j, height, width)] - imgGRIS.data[getIndice(i - 1, j, height, width)];
     }
     if (j > 0 && j < width - 1) {
-        dy = data[getIndice(i, j + 1, height, width)] - data[getIndice(i, j - 1, height, width)];
+        dy = imgGRIS.data[getIndice(i, j + 1, height, width)] - imgGRIS.data[getIndice(i, j - 1, height, width)];
     }
     return sqrt(dx * dx + dy * dy);
 }
 
-void Image::genererCourbePSNR(Image &imgLAB, Image &imgDeBase, int K, int minM, int maxM, int N){
-    double PSNR=0.;
-    bool contour=false;
-    string curbName="./CourbePSNR"+std::to_string(K)+".dat";
+
+void Image::genererCourbePSNR(Image &imgLAB, Image &imgDeBase, int K, int minM, int maxM, int N) {
+    double PSNR = 0.;
+    bool contour = false;
+    string curbName = "./CourbePSNR" + std::to_string(K) + ".dat";
     ofstream dataFile(curbName);
     if (!dataFile.is_open()) {
         cerr << "Erreur lors de l'ouverture du fichier de données pour la courbe de distortion." << endl;
         return;
     }
-    for (int m=minM; m<=maxM; m+=10){
+    for (int m = minM; m <= maxM; m += 10) {
         //dataFile << m ;
-        cout << "m=" << m <<endl;
-        Image imgSLICC=imgDeBase.RGBtoLAB();
-        imgSLICC.SLICC(K,m,N,contour);
-        Image imgComp=imgSLICC.LABtoRGB();
-        PSNR=imgDeBase.PSNR(imgComp);
-        cout << "PSNR=" << PSNR <<endl;
+        cout << "m=" << m << endl;
+        Image imgSLICC = imgDeBase.RGBtoLAB();
+        imgSLICC.SLICC(K, m, N, contour);
+        Image imgComp = imgSLICC.LABtoRGB();
+        PSNR = imgDeBase.PSNR(imgComp);
+        cout << "PSNR=" << PSNR << endl;
         dataFile << m << ' ' << PSNR << ' ' << endl;
     }
 
-    ofstream gnuplotScript("./CourbePSNR"+std::to_string(K)+".plt");
+    ofstream gnuplotScript("./CourbePSNR" + std::to_string(K) + ".plt");
     if (!gnuplotScript.is_open()) {
         cerr << "Erreur lors de l'ouverture du fichier de script GNUPLOT." << endl;
         return;
@@ -934,9 +907,25 @@ void Image::genererCourbePSNR(Image &imgLAB, Image &imgDeBase, int K, int minM, 
     gnuplotScript << "set title 'PSNR en fonction de K et N'\n";
     gnuplotScript << "set xlabel 'M'\n";
     gnuplotScript << "set ylabel 'PSNR (dB)'\n";
-    gnuplotScript << "plot '" << curbName << "' with lines title 'PSNR en Fonction pour k=" << std::to_string(K)<< "'\n";
+    gnuplotScript << "plot '" << curbName << "' with lines title 'PSNR en Fonction pour k=" << std::to_string(K)
+                  << "'\n";
 
     gnuplotScript.close();
 
     system(("gnuplot ./CourbePSNR" + std::to_string(K) + ".plt").c_str());
+}
+
+
+Image Image::RGBtoPGM() {
+    Image img(filename, PGM);
+    img.width = width;
+    img.height = height;
+    img.size = size;
+    img.data = createData();
+    for (int i = 0; i < size; i += 3) {
+        // Calculer la luminance Y
+        float Y = 0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2];
+        img.data[i / 3] = static_cast<OCTET>(Y);
+    }
+    return img;
 }
