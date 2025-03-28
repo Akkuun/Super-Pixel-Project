@@ -54,6 +54,8 @@ public:
     float calculerEntropieImage();
     void genererCourbeDistortion(Image &imgSLICC, const string &outputFilenameBase, Image &imgDeBase);
     void highlightContours(const vector<int> &labels);
+    Image TurboPixel(int &k);
+    int calculer_norme_gradian(int i, int j);
 private:
     string filename;
     Format format;

@@ -455,8 +455,9 @@ void Image::SLICC(int &k, int &m, int &N, bool &contour) {
         // x et y sont les coordonnées du centre du cluster au sein de la grille S
         // on place les centres des clusters sur la grille régulière S et on ajoute un pas de S/2 pour les placer au centre
 
-        int x = static_cast<int>((S / 2) + (clusterActuel % static_cast<int>(height / S)) * S);
-        int y = static_cast<int>((S / 2) + (clusterActuel / static_cast<int>(width / S)) * S);
+        int cols = static_cast<int>(width / S);
+        int x = static_cast<int>((S / 2) + (clusterActuel % cols) * S);
+        int y = static_cast<int>((S / 2) + (clusterActuel / cols) * S);
         clusters[clusterActuel].xk = x;
         clusters[clusterActuel].yk = y;
         // on met dans le cluster les valeurs de couleur du pixel L a b
@@ -469,8 +470,8 @@ void Image::SLICC(int &k, int &m, int &N, bool &contour) {
 
     //1.4 Initialiser la matrice des labels (indices des centres)  L(x, y) à -1 et la matrice des distances   D(x, y) à INF
     // dans notre cas les labels sont les indices des clusters
-    vector<int> labels(size / 3, -1); // /3 car on a 3 valeurs par pixel(L, a, b)
-    vector<float> distances(size / 3, INFINITY);
+    vector<int> labels(width * height, -1); // 3 composantes par pixel
+    vector<float> distances(width * height, INFINITY);
 
     //1.5 Initialiser le seuil de convergence ΔCk
     float seuil = 0.00001;
@@ -546,22 +547,22 @@ void Image::SLICC(int &k, int &m, int &N, bool &contour) {
     cout << "fin de la correction de la connectivié via floodFill" << endl;
     cout << "debut fusion des petis segments" << endl;
 //// 4.2 Fusionner les petits segments TODO A DECOMMENTER POUR FLOOD FILL
-//    int tailleSeuilMinimal = size / (3 * k);
-//    for (int i = 0; i < height; i++) {
-//        for (int j = 0; j < width; j++) {
-//            int index = getIndice(i, j, height, width);
-//            // Affecter au superpixel voisin le plus proche
-//            int bestLabel = affecterSuperPixelVoisin(i, j, newLabels, listeComposantesConnexes, labels,
-//                                                     tailleSeuilMinimal, clusters);
-//            // si le pixel n'est pas affecté à un superpixel voisin, on le laisse tel quel
-//            if (bestLabel != -1) {
-//                newLabels[index] = bestLabel;
-//            }
-//        }
-//    }
-//    cout << "fin fusion des petis segments" << endl;
-//    // Mettre à jour les labels
-//    labels = newLabels;
+    int tailleSeuilMinimal = size / (3 * k);
+    for (int i = 0; i < height; i++) {
+        for (int j = 0; j < width; j++) {
+            int index = getIndice(i, j, height, width);
+            // Affecter au superpixel voisin le plus proche
+            int bestLabel = affecterSuperPixelVoisin(i, j, newLabels, listeComposantesConnexes, labels,
+                                                     tailleSeuilMinimal, clusters);
+            // si le pixel n'est pas affecté à un superpixel voisin, on le laisse tel quel
+            if (bestLabel != -1) {
+                newLabels[index] = bestLabel;
+            }
+        }
+    }
+    cout << "fin fusion des petis segments" << endl;
+    // Mettre à jour les labels
+    labels = newLabels;
 
     // PHASE 5 : Coloration des superpixels
     //5.1 Colorer les superpixels avec la moyenne des couleurs de leurs pixels.
@@ -747,4 +748,158 @@ void Image::highlightContours(const vector<int> &labels) {
     ecrire_image_ppm(const_cast<char *>((filename.substr(0, filename.find_last_of('.')) + "_contours.ppm").c_str()),
                      imgHighligthContours.data, height, width);
     cout << "fin highligth des contours" << endl;
+}
+
+Image Image::TurboPixel(int &k) {
+    Image imgTurboPixel(filename, format);
+    imgTurboPixel.width = width;
+    imgTurboPixel.height = height;
+    imgTurboPixel.size = size;
+    imgTurboPixel.data = createData();
+
+
+    //1. Initialiser un ensemble de graines de superpixels régulièrement espacées
+    vector <pair<int, int>> seeds;
+    int step = static_cast<int>(sqrt(static_cast<float>(size) / k));
+    for (int y = step / 2; y < height; y += step) {
+        for (int x = step / 2; x < width; x += step) {
+            seeds.emplace_back(x, y);
+        }
+    }
+
+
+
+
+    //2. Générer une carte des gradients de l'image
+    Image carteGradient(filename, PGM);
+    carteGradient.width = width;
+    carteGradient.height = height;
+    carteGradient.size = size;
+    carteGradient.data = createData();
+
+    vector<float> gradients(size, 0.0f);
+
+    for (int i = 0; i < height; i++) {
+        for (int j = 0; j < width; j++) {
+            int index = getIndice(i, j, height, width);
+            int gradianVal = calculer_norme_gradian(i, j);
+            gradients[index] = gradianVal;
+            carteGradient.data[index] = gradianVal;
+        }
+    }
+
+    //3. Construire une fonction de diffusion de région :
+    //    a. Pour chaque graine, attribuer une région initiale
+    //    b. Propager progressivement les régions en fonction des gradients
+    //    c. Mettre à jour la frontière des régions pour éviter des chevauchements
+    vector<int> regionLabels(size, -1);
+    queue <pair<int, int>> regionQueue;
+
+    for (const auto &seed: seeds) {
+        int x = seed.first;
+        int y = seed.second;
+        int index = getIndice(y, x, height, width);
+        regionLabels[index] = index;
+        regionQueue.push({x, y});
+    }
+
+    while (!regionQueue.empty()) {
+        auto [x, y] = regionQueue.front();
+        regionQueue.pop();
+        int index = getIndice(y, x, height, width);
+
+        for (int dx = -1; dx <= 1; dx++) {
+            for (int dy = -1; dy <= 1; dy++) {
+                int nx = x + dx;
+                int ny = y + dy;
+                if (nx >= 0 && nx < width && ny >= 0 && ny < height) {
+                    int nIndex = getIndice(ny, nx, height, width);
+                    if (regionLabels[nIndex] == -1 && gradients[nIndex] < gradients[index]) {
+                        regionLabels[nIndex] = regionLabels[index];
+                        regionQueue.push({nx, ny});
+                    }
+                }
+            }
+        }
+    }
+    //4. Adjust the boundaries with energy optimization to maintain regularity
+    for (int i = 0; i < height; i++) {
+        for (int j = 0; j < width; j++) {
+            int index = getIndice(i, j, height, width);
+            for (int dx = -1; dx <= 1; dx++) {
+                for (int dy = -1; dy <= 1; dy++) {
+                    int nx = i + dx;
+                    int ny = j + dy;
+                    if (nx >= 0 && nx < height && ny >= 0 && ny < width) {
+                        int nIndex = getIndice(nx, ny, height, width);
+                        if (regionLabels[nIndex] != regionLabels[index]) {
+                            float energy = gradients[nIndex] + gradients[index];
+                            if (energy < gradients[index]) {
+                                regionLabels[index] = regionLabels[nIndex];
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    //5. Vérifier la convergence (les régions ne changent plus de manière significative)
+
+    //5. Vérifier la convergence (les régions ne changent plus de manière significative)
+    bool converged = false;
+    while (!converged) {
+        converged = true;
+        for (int i = 0; i < height; i++) {
+            for (int j = 0; j < width; j++) {
+                int index = getIndice(i, j, height, width);
+                for (int dx = -1; dx <= 1; dx++) {
+                    for (int dy = -1; dy <= 1; dy++) {
+                        int nx = i + dx;
+                        int ny = j + dy;
+                        if (nx >= 0 && nx < height && ny >= 0 && ny < width) {
+                            int nIndex = getIndice(nx, ny, height, width);
+                            if (regionLabels[nIndex] != regionLabels[index]) {
+                                float energy = gradients[nIndex] + gradients[index];
+                                if (energy < gradients[index]) {
+                                    regionLabels[index] = regionLabels[nIndex];
+                                    converged = false;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+//6. Sortie : Carte des superpixels
+    for (int i = 0; i < height; i++) {
+        for (int j = 0; j < width; j++) {
+            int index = getIndice(i, j, height, width);
+            int label = regionLabels[index];
+            imgTurboPixel.data[index * 3] = data[label * 3];
+            imgTurboPixel.data[index * 3 + 1] = data[label * 3 + 1];
+            imgTurboPixel.data[index * 3 + 2] = data[label * 3 + 2];
+        }
+    }
+
+    //Generer image de contours
+    this->highlightContours(regionLabels);
+
+
+    return imgTurboPixel;
+
+}
+
+int Image::calculer_norme_gradian(int i, int j) {
+    int dx = 0;
+    int dy = 0;
+    if (i > 0 && i < height - 1) {
+        dx = data[getIndice(i + 1, j, height, width)] - data[getIndice(i - 1, j, height, width)];
+    }
+    if (j > 0 && j < width - 1) {
+        dy = data[getIndice(i, j + 1, height, width)] - data[getIndice(i, j - 1, height, width)];
+    }
+    return sqrt(dx * dx + dy * dy);
 }

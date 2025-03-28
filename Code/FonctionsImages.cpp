@@ -4,26 +4,28 @@
 using namespace std;
 
 void SLICC(int argc, char *argv[]) {
-    if (argc != 4) {
-        cout << "Usage: " << argv[0] << " NomImageIn.ppm NomImageOutSLICC.ppm GénérerImageContour? (0/1)" << endl;
+    if (argc != 5) {
+        cout << "Usage: " << argv[0]
+             << " NomImageIn.ppm NomImageOutSLICC.ppm GénérerImageContour? (0/1) GénérerImageCompressé?( 0/1) " << endl;
         exit(1);
     }
 
     string inputFilename = argv[1];
     string outputFilename = argv[2];
     bool contour = atoi(argv[3]);
-
+    string outputFilenameTurboPixel = outputFilename.substr(0, outputFilename.find_last_of('.')) + "_TurboPIXEL.ppm";
+    bool compress = atoi(argv[4]);
     //récupération image PPM
     Image img(inputFilename, Image::PPM);
     img.read();
     //conversion en LAB
     Image imgLAB = img.RGBtoLAB();
     imgLAB.write(outputFilename);
-    int k = 6000; // Nombre de clusters
-    int m = 30; //résolution spatiale
+    int k = 23000; // Nombre de clusters
+    int m = 60; //résolution spatiale
     int N = img.getSize();
     //SLICC
-    imgLAB.SLICC(k, m, N , contour);
+    imgLAB.SLICC(k, m, N, contour);
     imgLAB.write(outputFilename);
     Image imgOUT = imgLAB.LABtoRGB();
     //écriture de l'image Superpixels
@@ -31,7 +33,14 @@ void SLICC(int argc, char *argv[]) {
     cout << "Fin SLICC" << endl;
     Image imgOUTLAB = imgOUT.RGBtoLAB();
     //création de la courbe de distortion pour afficher le PSNR en fonction de nBit lors de la compression par quantification d'espace de chrominnance
-    imgOUT.genererCourbeDistortion(imgOUTLAB, outputFilename,img);
+    if (compress) {
+        imgOUT.genererCourbeDistortion(imgOUTLAB, outputFilename, img);
 
+    }
+
+    Image imgTurboPixel = img.TurboPixel(k);
+    Image imgTurboRGB = imgTurboPixel.LABtoRGB();
+    //écriture de l'image Superpixels
+    imgTurboRGB.write(outputFilenameTurboPixel);
 }
 
