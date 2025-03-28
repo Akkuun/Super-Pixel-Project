@@ -27,7 +27,7 @@ void SLICC(int argc, char *argv[]) {
 
     // Courbe PSNR
     cout << "Debut Courbe PSNR" << endl;
-    img.genererCourbePSNR(imgLAB,img,k, 10, 50, N);
+
     cout << "Fin Courbe PSNR" << endl;
 
     //SLICC
@@ -40,7 +40,7 @@ void SLICC(int argc, char *argv[]) {
     Image imgOUTLAB = imgOUT.RGBtoLAB();
     //création de la courbe de distortion pour afficher le PSNR en fonction de nBit lors de la compression par quantification d'espace de chrominnance
     if (compress) {
-        imgOUT.genererCourbeDistortion(imgOUTLAB, outputFilename, img);
+        img.genererCourbePSNR(imgLAB,img,k, 10, 50, N);
 
     }
 
@@ -51,4 +51,3 @@ void SLICC(int argc, char *argv[]) {
 }
 
 
-}
