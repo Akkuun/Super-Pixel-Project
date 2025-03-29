@@ -301,9 +301,9 @@ Image Image::LABtoRGB() {
 float Image::calculerDistanceCouleur(ClusterCenter &cluster, int &i, int &j) {
     // Calcul de la distance couleur
     int index = getIndice(i, j, height, width) * 3;
-    float dL = cluster.Lk - data[index];
-    float da = cluster.ak - data[index + 1];
-    float db = cluster.bk - data[index + 2];
+    float dL = data[index] - cluster.Lk;
+    float da = data[index + 1] - cluster.ak;
+    float db = data[index + 2]- cluster.bk;
     return sqrt(dL * dL + da * da + db * db);
 }
 
@@ -452,22 +452,26 @@ void Image::SLICC(int &k, int &m, int &N, bool &contour) {
     float S = sqrt(static_cast<float>(N) / k);
     cout << "Initialisation des centres de clusters" << endl;
     //1.3 Placer les centres de clusters Ck sur une grille régulière (avec un léger ajustement pour éviter les bords).
-    vector <ClusterCenter> clusters(k);
-    for (int clusterActuel = 0; clusterActuel < k; clusterActuel++) {
-        // x et y sont les coordonnées du centre du cluster au sein de la grille S
-        // on place les centres des clusters sur la grille régulière S et on ajoute un pas de S/2 pour les placer au centre
+    vector <ClusterCenter> clusters;
 
-        int cols = static_cast<int>(width / S);
-        int x = static_cast<int>((S / 2) + (clusterActuel % cols) * S);
-        int y = static_cast<int>((S / 2) + (clusterActuel / cols) * S);
-        clusters[clusterActuel].xk = x;
-        clusters[clusterActuel].yk = y;
-        // on met dans le cluster les valeurs de couleur du pixel L a b
-        int index = getIndice(y, x, height, width);
-        clusters[clusterActuel].Lk = data[index * 3];
-        clusters[clusterActuel].ak = data[index * 3 + 1];
-        clusters[clusterActuel].bk = data[index * 3 + 2];
+    int indexCluster=0;
+    for (int y = S / 2; y < height; y += S) {
+        for (int x = S / 2; x < width; x += S) {
+            // x et y sont les coordonnées du centre du cluster au sein de la grille S
+            // on place les centres des clusters sur la grille régulière S et on ajoute un pas de S/2 pour les placer au centre
+
+            int index=getIndice(y,x,height,width);
+            ClusterCenter clusterActuel;
+            clusterActuel.xk=x;
+            clusterActuel.yk=y;
+            // on met dans le cluster les valeurs de couleur du pixel L a b
+            clusterActuel.Lk=data[index*3];
+            clusterActuel.ak=data[index*3+1];
+            clusterActuel.bk=data[index*3+2];
+            clusters.push_back(clusterActuel);
+        }
     }
+
     cout << "fin initilisation des centres de clusters" << endl;
 
     //1.4 Initialiser la matrice des labels (indices des centres)  L(x, y) à -1 et la matrice des distances   D(x, y) à INF
@@ -476,7 +480,7 @@ void Image::SLICC(int &k, int &m, int &N, bool &contour) {
     vector<float> distances(width * height, INFINITY);
 
     //1.5 Initialiser le seuil de convergence ΔCk
-    float seuil = 0.00001;
+    float seuil = 0.1;
     float deltaCk = 0;
     float lastDeltaCk = INFINITY;
     int iteration = 0;
@@ -488,23 +492,22 @@ void Image::SLICC(int &k, int &m, int &N, bool &contour) {
         iteration += 1;
         //2.1 Pour chaque centre de cluster C_k
 #pragma omp parallel for
-        for (int cluster = 0; cluster < k; cluster++) {
+        for (int i = 0; i < clusters.size(); i++) {
             //2.2 Pour chaque pixel P(x, y) dans une fenêtre 2S x 2S autour de C_k
             for (int dx = -S; dx <= S; dx++) {
                 for (int dy = -S; dy <= S; dy++) {
                     //2.3 Calculer la distance D(P, C_k) entre le pixel P et le centre C_k
-                    int x = clusters[cluster].xk + dx;
-                    int y = clusters[cluster].yk + dy;
-
+                    int x = clusters[i].xk + dx;
+                    int y = clusters[i].yk + dy;
                     if (x >= 0 && x < width && y >= 0 && y < height) {
                         int index = getIndice(y, x, height, width);
-                        float d_lab = calculerDistanceCouleur(clusters[cluster], x, y);
-                        float d_xy = calculerDistanceSpatiale(clusters[cluster], x, y);
-                        float D = d_lab + (m / S) * d_xy;
+                        float dC = calculerDistanceCouleur(clusters[i], y, x);
+                        float dS = sqrt(dx * dx + dy * dy);
+                        float D = dC + (m / S) * dS;
 
                         if (D < distances[index]) {
                             distances[index] = D;
-                            labels[index] = cluster;
+                            labels[index] = i;
                         }
                     }
                 }
@@ -530,41 +533,40 @@ void Image::SLICC(int &k, int &m, int &N, bool &contour) {
     }
     cout << "convergence atteinte" << endl;
 
-    // PHASE 4 : Correction de la connectivité (SLICC spécifique)
-    vector<int> listeComposantesConnexes;
-    vector<int> newLabels(size / 3, -1);
-    int label = 0;
-    cout << "debut de la correction de la connectivié via floodFill" << endl;
-// 4.1 Parcourir l'image pour détecter les superpixels non connexes
-    for (int i = 0; i < height; i++) {
-        for (int j = 0; j < width; j++) {
-            int index = getIndice(i, j, height, width);
-            if (newLabels[index] == -1) {
-                // Effectuer un flood fill pour identifier les composantes connexes
-                listeComposantesConnexes.push_back(floodFill(i, j, newLabels, label, labels));
-                label++;
-            }
-        }
-    }
-    cout << "fin de la correction de la connectivié via floodFill" << endl;
-    cout << "debut fusion des petis segments" << endl;
-//// 4.2 Fusionner les petits segments TODO A DECOMMENTER POUR FLOOD FILL
-    int tailleSeuilMinimal = size / (3 * k);
-    for (int i = 0; i < height; i++) {
-        for (int j = 0; j < width; j++) {
-            int index = getIndice(i, j, height, width);
-            // Affecter au superpixel voisin le plus proche
-            int bestLabel = affecterSuperPixelVoisin(i, j, newLabels, listeComposantesConnexes, labels,
-                                                     tailleSeuilMinimal, clusters);
-            // si le pixel n'est pas affecté à un superpixel voisin, on le laisse tel quel
-            if (bestLabel != -1) {
-                newLabels[index] = bestLabel;
-            }
-        }
-    }
-    cout << "fin fusion des petis segments" << endl;
-    // Mettre à jour les labels
-    labels = newLabels;
+//     // PHASE 4 : Correction de la connectivité (SLICC spécifique)
+//     vector<int> listeComposantesConnexes;
+//     vector<int> newLabels(size / 3, -1);
+//     int label = 0;
+//     cout << "debut de la correction de la connectivié via floodFill" << endl;
+// // 4.1 Parcourir l'image pour détecter les superpixels non connexes
+//     for (int i = 0; i < height; i++) {
+//         for (int j = 0; j < width; j++) {
+//             int index = getIndice(i, j, height, width);
+//             if (newLabels[index] == -1) {
+//                 // Effectuer un flood fill pour identifier les composantes connexes
+//                 listeComposantesConnexes.push_back(floodFill(i, j, newLabels, label, labels));
+//                 label++;
+//             }
+//         }
+//     }
+//     cout << "fin de la correction de la connectivié via floodFill" << endl;
+//     cout << "debut fusion des petis segments" << endl;
+// //// 4.2 Fusionner les petits segments TODO A DECOMMENTER POUR FLOOD FILL
+//     int tailleSeuilMinimal = size / (3 * k);
+//     for (int i = 0; i < height; i++) {
+//         for (int j = 0; j < width; j++) {
+//             int index = getIndice(i, j, height, width);
+//             // Affecter au superpixel voisin le plus proche
+//             int bestLabel = affecterSuperPixelVoisin(i, j, newLabels, listeComposantesConnexes, labels, clusters);
+//             // si le pixel n'est pas affecté à un superpixel voisin, on le laisse tel quel
+//             if (bestLabel != -1) {
+//                 newLabels[index] = bestLabel;
+//             }
+//         }
+//     }
+//     cout << "fin fusion des petis segments" << endl;
+//     // Mettre à jour les labels
+//     labels = newLabels;
 
     // PHASE 5 : Coloration des superpixels
     //5.1 Colorer les superpixels avec la moyenne des couleurs de leurs pixels.
@@ -585,6 +587,7 @@ void Image::SLICC(int &k, int &m, int &N, bool &contour) {
 
     cout << "Fin SLICC" << endl;
 }
+
 
 /**
  * \brief Calculer le PSNR entre 2 images
@@ -769,27 +772,27 @@ void Image::highlightContours(const vector<int> &labels) {
  * @param maxM
  * @param N
  */
-void Image::genererCourbePSNR( Image &imgDeBase, int K, int minM, int maxM, int N) {
-    double PSNR = 0.;
-    bool contour = false;
-    string curbName = "./CourbePSNR" + std::to_string(K) + ".dat";
+void Image::genererCourbePSNR(Image &imgLAB, Image &imgDeBase, int K, int minM, int maxM, int N){
+    double PSNR=0.;
+    bool contour=false;
+    string curbName="./CourbePSNR"+std::to_string(K)+".dat";
     ofstream dataFile(curbName);
     if (!dataFile.is_open()) {
         cerr << "Erreur lors de l'ouverture du fichier de données pour la courbe de distortion." << endl;
         return;
     }
-    for (int m = minM; m <= maxM; m += 10) {
+    for (int m=minM; m<=maxM; m+=10){
         //dataFile << m ;
-        cout << "m=" << m << endl;
-        Image imgSLICC = imgDeBase.RGBtoLAB();
-        imgSLICC.SLICC(K, m, N, contour);
-        Image imgComp = imgSLICC.LABtoRGB();
-        PSNR = imgDeBase.PSNR(imgComp);
-        cout << "PSNR=" << PSNR << endl;
+        cout << "m=" << m <<endl;
+        Image imgSLICC=imgDeBase.RGBtoLAB();
+        imgSLICC.SLICC(K,m,N,contour);
+        Image imgComp=imgSLICC.LABtoRGB();
+        PSNR=imgDeBase.PSNR(imgComp);
+        cout << "PSNR=" << PSNR <<endl;
         dataFile << m << ' ' << PSNR << ' ' << endl;
     }
 
-    ofstream gnuplotScript("./CourbePSNR" + std::to_string(K) + ".plt");
+    ofstream gnuplotScript("./CourbePSNR"+std::to_string(K)+".plt");
     if (!gnuplotScript.is_open()) {
         cerr << "Erreur lors de l'ouverture du fichier de script GNUPLOT." << endl;
         return;
@@ -799,14 +802,12 @@ void Image::genererCourbePSNR( Image &imgDeBase, int K, int minM, int maxM, int 
     gnuplotScript << "set title 'PSNR en fonction de K et N'\n";
     gnuplotScript << "set xlabel 'M'\n";
     gnuplotScript << "set ylabel 'PSNR (dB)'\n";
-    gnuplotScript << "plot '" << curbName << "' with lines title 'PSNR en Fonction pour k=" << std::to_string(K)
-                  << "'\n";
+    gnuplotScript << "plot '" << curbName << "' with lines title 'PSNR en Fonction pour k=" << std::to_string(K)<< "'\n";
 
     gnuplotScript.close();
 
     system(("gnuplot ./CourbePSNR" + std::to_string(K) + ".plt").c_str());
 }
-
 /**
  * \brief Convertit une image RGB en PGM.
  * @return L'image convertie au format PGM.

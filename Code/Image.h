@@ -47,9 +47,7 @@ public:
     Image LABtoRGB();
     float calculerDistanceCouleur(ClusterCenter &cluster, int &i, int &j);
     float calculerDistanceSpatiale(ClusterCenter &cluster, int &i, int &j);
-    void
-    calculerNouveauCentre(vector <ClusterCenter> &clusters, vector<int> &labels, int cluster, float &newL, float &newa,
-                          float &newb, float &newx, float &newy, float &newDeltaCk);
+    void calculerNouveauCentre(vector <ClusterCenter> &clusters, vector<int> &labels, int cluster, float &newL,float &newa,float &newb, float &newx, float &newy, float &newDeltaCk);
     int floodFill(int x, int y, vector<int> &newLabels, int &label, vector<int> &labels);
     int affecterSuperPixelVoisin(int x, int y, vector<int> &newLabels, vector<int> &listeComposantesConnexes,
                                  vector<int> &labels,
@@ -61,7 +59,7 @@ public:
     void highlightContours(const vector<int> &labels);
     Image MeanShiftSegmentation(float spatial_radius, float color_radius, int max_iterations);
     int calculer_norme_gradian(int i, int j, Image &imgGRIS);
-    void genererCourbePSNR(Image &imgDeBase, int K, int minM, int maxM, int N);
+    void genererCourbePSNR(Image &imgLAB, Image &imgDeBase, int K, int minM, int maxM, int N);
 
     Image RGBtoPGM();
 private:
