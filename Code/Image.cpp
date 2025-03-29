@@ -8,6 +8,8 @@
 #include <omp.h>
 #include <climits>
 #include <fstream>
+#include <cfloat>
+#include <algorithm>
 
 using namespace std;
 
@@ -754,127 +756,98 @@ void Image::highlightContours(const vector<int> &labels) {
     cout << "fin highligth des contours" << endl;
 }
 
+Image Image::MeanShiftSegmentation(float spatial_radius, float color_radius, int max_iterations) {
 
-/**
- * \brief Applique l'algorithme TurboPixel sur l'image LAB
- * \param k Nombre de superpixels souhaité
- * \return Retourne une image avec les superpixels LAB
- */
-Image Image::TurboPixel(int &k, Image &imgGRIS) {
-    Image imgTurboPixel(filename, format);
-    imgTurboPixel.width = width;
-    imgTurboPixel.height = height;
-    imgTurboPixel.size = size;
-    imgTurboPixel.data = createData();
-
-    // 1. Initialiser un ensemble de graines de superpixels régulièrement espacées
-    vector<pair<int, int>> seeds;
-    int step = static_cast<int>(sqrt(static_cast<float>(width * height) / k));
-    for (int y = step / 2; y < height; y += step) {
-        for (int x = step / 2; x < width; x += step) {
-            seeds.emplace_back(x, y);
+    cout << "Début de la segmentation par Mean Shift" << endl;
+    vector<Point> points;
+    for (int i = 0; i < height; ++i) {
+        for (int j = 0; j < width; ++j) {
+            int index = getIndice(i, j, height, width) * 3;
+            points.push_back({(float)j, (float)i, (float)data[index], (float)data[index + 1], (float)data[index + 2]});
         }
     }
 
-    // 2. Calculer le gradient de l'image
-    Image imgGradient(filename, PGM);
-    imgGradient.width = width;
-    imgGradient.height = height;
-    imgGradient.size = size;
-    imgGradient.data = createData();
+    vector<Point> shifted_points = points;
+    float convergence_threshold = 1e-3;
+    for (int iter = 0; iter < max_iterations; ++iter) {
+        cout << "Iteration: " << iter + 1 << endl;
+        bool converged = true;
 
-    for (int i = 0; i < height; i++) {
-        for (int j = 0; j < width; j++) {
+        // Parcours de chaque pixel
+        for (size_t i = 0; i < points.size(); ++i) {
+            float sum_x = 0, sum_y = 0, sum_L = 0, sum_a = 0, sum_b = 0, weight_sum = 0;
+
+            // Recherche des pixels voisins dans un rayon spatial donné
+            for (size_t j = 0; j < points.size(); ++j) {
+                float dx = points[i].x - points[j].x;
+                float dy = points[i].y - points[j].y;
+                float spatial_dist = dx * dx + dy * dy;
+
+                float dL = points[i].L - points[j].L;
+                float da = points[i].a - points[j].a;
+                float db = points[i].b - points[j].b;
+                float color_dist = dL * dL + da * da + db * db;
+
+                // Vérification si le pixel est dans la fenêtre de voisinage
+                if (spatial_dist < spatial_radius * spatial_radius && color_dist < color_radius * color_radius) {
+                    float weight = exp(-spatial_dist / (2 * spatial_radius * spatial_radius) -
+                                       color_dist / (2 * color_radius * color_radius));
+                    sum_x += points[j].x * weight;
+                    sum_y += points[j].y * weight;
+                    sum_L += points[j].L * weight;
+                    sum_a += points[j].a * weight;
+                    sum_b += points[j].b * weight;
+                    weight_sum += weight;
+                }
+            }
+
+            // Mise à jour du point
+            if (weight_sum > 0) {
+                Point new_point = {sum_x / weight_sum, sum_y / weight_sum,
+                                   sum_L / weight_sum, sum_a / weight_sum, sum_b / weight_sum};
+
+                // Vérification de la convergence
+                float dist = sqrt(pow(new_point.x - shifted_points[i].x, 2) +
+                                  pow(new_point.y - shifted_points[i].y, 2) +
+                                  pow(new_point.L - shifted_points[i].L, 2) +
+                                  pow(new_point.a - shifted_points[i].a, 2) +
+                                  pow(new_point.b - shifted_points[i].b, 2));
+
+                if (dist > convergence_threshold) {
+                    converged = false;
+                }
+                shifted_points[i] = new_point;
+            }
+        }
+
+        if (converged) {
+            cout << "Convergence atteinte en " << iter + 1 << " itérations" << endl;
+            break;
+        }
+
+        points = shifted_points; // Mise à jour des points pour l'itération suivante
+    }
+
+    // Création de l'image segmentée
+    Image result(filename, format);
+    result.width = width;
+    result.height = height;
+    result.size = size;
+    result.data = createData();
+
+    for (int i = 0; i < height; ++i) {
+        for (int j = 0; j < width; ++j) {
             int index = getIndice(i, j, height, width);
-            imgGradient.data[index] = calculer_norme_gradian(i, j,imgGRIS);
-        }
-    }
-    string fileName = filename.substr(0, filename.find_last_of('.')) + "_gradient.pgm";
-    imgGradient.write(fileName);
-
-    // 3. Ajuster les graines vers les zones de fort gradient
-    for (auto &seed : seeds) {
-        int x = seed.first;
-        int y = seed.second;
-        int bestX = x, bestY = y;
-        int minGradient = imgGradient.data[getIndice(y, x, height, width)];
-
-        for (int dy = -1; dy <= 1; dy++) {
-            for (int dx = -1; dx <= 1; dx++) {
-                int newX = x + dx;
-                int newY = y + dy;
-                if (newX >= 0 && newX < width && newY >= 0 && newY < height) {
-                    int newGradient = imgGradient.data[getIndice(newY, newX, height, width)];
-                    if (newGradient < minGradient) {
-                        minGradient = newGradient;
-                        bestX = newX;
-                        bestY = newY;
-                    }
-                }
-            }
-        }
-        seed = {bestX, bestY};
-    }
-
-    // 4. Propager les superpixels en utilisant une file de priorité (type croissance de région)
-    vector<int> labels(width * height, -1);
-    queue<pair<int, int>> queuePixels;
-
-    int label = 0;
-    for (const auto &seed : seeds) {
-        queuePixels.push(seed);
-        labels[getIndice(seed.second, seed.first, height, width)] = label++;
-    }
-
-    while (!queuePixels.empty()) {
-        auto [x, y] = queuePixels.front();
-        queuePixels.pop();
-        int currentLabel = labels[getIndice(y, x, height, width)];
-
-        for (int dy = -1; dy <= 1; dy++) {
-            for (int dx = -1; dx <= 1; dx++) {
-                int newX = x + dx;
-                int newY = y + dy;
-                if (newX >= 0 && newX < width && newY >= 0 && newY < height) {
-                    int newIndex = getIndice(newY, newX, height, width);
-                    if (labels[newIndex] == -1) {
-                        labels[newIndex] = currentLabel;
-                        queuePixels.push({newX, newY});
-                    }
-                }
-            }
+            result.data[index * 3] = (OCTET)shifted_points[index].L;
+            result.data[index * 3 + 1] = (OCTET)shifted_points[index].a;
+            result.data[index * 3 + 2] = (OCTET)shifted_points[index].b;
         }
     }
 
-    // 5. Assigner les couleurs aux superpixels dans l'image finale
-    for (int i = 0; i < height; i++) {
-        for (int j = 0; j < width; j++) {
-            int labelIndex = labels[getIndice(i, j, height, width)];
-            imgTurboPixel.data[getIndice(i, j, height, width)] = labelIndex * (255 / k);
-        }
-    }
-
-    return imgTurboPixel;
+    return result;
 }
 
-/**
- * \brief Calculer la norme du gradient du pixel (i,j)
- * \param i : coordonnée x du pixel
- * \param j : coordonnée y du pixel
- * \return La norme du gradient
- */
-int Image::calculer_norme_gradian(int i, int j, Image &imgGRIS) {
-    int dx = 0;
-    int dy = 0;
 
-    if (i > 0 && i < height - 1) {
-        dx = imgGRIS.data[getIndice(i + 1, j, height, width)] - imgGRIS.data[getIndice(i - 1, j, height, width)];
-    }
-    if (j > 0 && j < width - 1) {
-        dy = imgGRIS.data[getIndice(i, j + 1, height, width)] - imgGRIS.data[getIndice(i, j - 1, height, width)];
-    }
-    return sqrt(dx * dx + dy * dy);
-}
 
 
 void Image::genererCourbePSNR(Image &imgLAB, Image &imgDeBase, int K, int minM, int maxM, int N) {

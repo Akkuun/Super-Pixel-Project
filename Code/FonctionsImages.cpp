@@ -21,7 +21,7 @@ void SLICC(int argc, char *argv[]) {
     //conversion en LAB
     Image imgLAB = img.RGBtoLAB();
     imgLAB.write(outputFilename);
-    int k = 20000; // Nombre de clusters
+    int k = 5000; // Nombre de clusters
     int m = 60; //résolution spatiale
     int N = img.getSize();
 
@@ -44,13 +44,18 @@ void SLICC(int argc, char *argv[]) {
 //
 //    }
 
-    Image imgGris = img.RGBtoPGM();
-    imgGris.write(outputFilename.substr(0, outputFilename.find_last_of('.')) + "_GRIS.pgm");
+    // Perform Mean Shift Segmentation
+    float spatial_radius = 10.0f;
+    float color_radius = 10.0f;
+    int max_iterations = 100;
+    Image segmentedImg = imgLAB.MeanShiftSegmentation(spatial_radius, color_radius, max_iterations);
 
+    // Convert the segmented image back to RGB
+    Image resultImg = segmentedImg.LABtoRGB();
 
-    Image imgTurboPixel_LAB = img.TurboPixel(k,imgGris);
-    Image imgTurboPixel_RGB = imgTurboPixel_LAB.LABtoRGB();
-    imgTurboPixel_RGB.write(outputFilenameTurboPixel);
+    // Save the segmented image
+    resultImg.write(outputFilename);
+
 }
 
 
