@@ -299,9 +299,12 @@ Image Image::LABtoRGB() {
 float Image::calculerDistanceCouleur(ClusterCenter &cluster, int i, int j) {
     // Calcul de la distance couleur
     int index = getIndice(i, j, height, width) * 3;
-    float dL = cluster.Lk - data[index];
-    float da = cluster.ak - data[index + 1];
-    float db = cluster.bk - data[index + 2];
+    // float dL = cluster.Lk - data[index];
+    // float da = cluster.ak - data[index + 1];
+    // float db = cluster.bk - data[index + 2];
+    float dL = data[index] - cluster.Lk;
+    float da = data[index + 1] - cluster.ak;
+    float db = data[index + 2]- cluster.bk;
     return sqrt(dL * dL + da * da + db * db);
 }
 
@@ -332,10 +335,9 @@ float Image::calculerDistanceSpatiale(ClusterCenter &cluster, int x, int y) {
  * \param newy Nouvelle position y du centre.
  * \param newDeltaCk Nouveau deltaCk.
  */
-void Image::calculerNouveauCentre(vector<ClusterCenter> &clusters, vector<int> &labels, int cluster, float &newL,
-    float &newa, float &newb, float &newx, float &newy, float &newDeltaCk) {
-    if (cluster < 0 || cluster >= clusters.size()) return; // Vérification des limites
-
+void Image::calculerNouveauCentre(vector <ClusterCenter> &clusters, vector<int> &labels, int cluster, float &newL,
+                                  float &newa,
+                                  float &newb, float &newx, float &newy, float &newDeltaCk) {
     float sumL = 0, suma = 0, sumb = 0, sumx = 0, sumy = 0;
     int nbPixels = 0;
 
@@ -360,6 +362,7 @@ void Image::calculerNouveauCentre(vector<ClusterCenter> &clusters, vector<int> &
             nbPixels++;
         }
     }
+    if (nbPixels == 0) return;
 
     if (nbPixels == 0) return; // Évite une division par zéro
 
@@ -477,7 +480,7 @@ void Image::SLICC(int &k, int &m, int &N, bool &contour) {
             // x et y sont les coordonnées du centre du cluster au sein de la grille S
             // on place les centres des clusters sur la grille régulière S et on ajoute un pas de S/2 pour les placer au centre
             
-            int index=getIndice(x,y,height,width);
+            int index=getIndice(y,x,height,width);
             ClusterCenter clusterActuel;
             clusterActuel.xk=x;
             clusterActuel.yk=y;
@@ -511,15 +514,15 @@ void Image::SLICC(int &k, int &m, int &N, bool &contour) {
 #pragma omp parallel for
         for (int i = 0; i < clusters.size(); i++) {
             //2.2 Pour chaque pixel P(x, y) dans une fenêtre 2S x 2S autour de C_k
-            for (int dy = -S; dy <= S; dy++) {
-                for (int dx = -S; dx <= S; dx++) {
+            for (int dx = -S; dx <= S; dx++) {
+                for (int dy = -S; dy <= S; dy++) {
                     //2.3 Calculer la distance D(P, C_k) entre le pixel P et le centre C_k
                     int x = clusters[i].xk + dx;
                     int y = clusters[i].yk + dy;
                     if (x >= 0 && x < width && y >= 0 && y < height) {
                         int index = getIndice(y, x, height, width);
                         float dC = calculerDistanceCouleur(clusters[i], y, x);
-                        float dS = calculerDistanceSpatiale(clusters[i], y, x);
+                        float dS = sqrt(dx * dx + dy * dy);
                         float D = dC + (m / S) * dS;
                         
                         if (D < distances[index]) {
@@ -550,40 +553,40 @@ void Image::SLICC(int &k, int &m, int &N, bool &contour) {
     }
     cout << "convergence atteinte" << endl;
 
-    // PHASE 4 : Correction de la connectivité (SLICC spécifique)
-    vector<int> listeComposantesConnexes;
-    vector<int> newLabels(size / 3, -1);
-    int label = 0;
-    cout << "debut de la correction de la connectivié via floodFill" << endl;
-// 4.1 Parcourir l'image pour détecter les superpixels non connexes
-    for (int i = 0; i < height; i++) {
-        for (int j = 0; j < width; j++) {
-            int index = getIndice(i, j, height, width);
-            if (newLabels[index] == -1) {
-                // Effectuer un flood fill pour identifier les composantes connexes
-                listeComposantesConnexes.push_back(floodFill(i, j, newLabels, label, labels));
-                label++;
-            }
-        }
-    }
-    cout << "fin de la correction de la connectivié via floodFill" << endl;
-    cout << "debut fusion des petis segments" << endl;
-//// 4.2 Fusionner les petits segments TODO A DECOMMENTER POUR FLOOD FILL
-    int tailleSeuilMinimal = size / (3 * k);
-    for (int i = 0; i < height; i++) {
-        for (int j = 0; j < width; j++) {
-            int index = getIndice(i, j, height, width);
-            // Affecter au superpixel voisin le plus proche
-            int bestLabel = affecterSuperPixelVoisin(i, j, newLabels, listeComposantesConnexes, labels, clusters);
-            // si le pixel n'est pas affecté à un superpixel voisin, on le laisse tel quel
-            if (bestLabel != -1) {
-                newLabels[index] = bestLabel;
-            }
-        }
-    }
-    cout << "fin fusion des petis segments" << endl;
-    // Mettre à jour les labels
-    labels = newLabels;
+//     // PHASE 4 : Correction de la connectivité (SLICC spécifique)
+//     vector<int> listeComposantesConnexes;
+//     vector<int> newLabels(size / 3, -1);
+//     int label = 0;
+//     cout << "debut de la correction de la connectivié via floodFill" << endl;
+// // 4.1 Parcourir l'image pour détecter les superpixels non connexes
+//     for (int i = 0; i < height; i++) {
+//         for (int j = 0; j < width; j++) {
+//             int index = getIndice(i, j, height, width);
+//             if (newLabels[index] == -1) {
+//                 // Effectuer un flood fill pour identifier les composantes connexes
+//                 listeComposantesConnexes.push_back(floodFill(i, j, newLabels, label, labels));
+//                 label++;
+//             }
+//         }
+//     }
+//     cout << "fin de la correction de la connectivié via floodFill" << endl;
+//     cout << "debut fusion des petis segments" << endl;
+// //// 4.2 Fusionner les petits segments TODO A DECOMMENTER POUR FLOOD FILL
+//     int tailleSeuilMinimal = size / (3 * k);
+//     for (int i = 0; i < height; i++) {
+//         for (int j = 0; j < width; j++) {
+//             int index = getIndice(i, j, height, width);
+//             // Affecter au superpixel voisin le plus proche
+//             int bestLabel = affecterSuperPixelVoisin(i, j, newLabels, listeComposantesConnexes, labels, clusters);
+//             // si le pixel n'est pas affecté à un superpixel voisin, on le laisse tel quel
+//             if (bestLabel != -1) {
+//                 newLabels[index] = bestLabel;
+//             }
+//         }
+//     }
+//     cout << "fin fusion des petis segments" << endl;
+//     // Mettre à jour les labels
+//     labels = newLabels;
 
     // PHASE 5 : Coloration des superpixels
     //5.1 Colorer les superpixels avec la moyenne des couleurs de leurs pixels.
