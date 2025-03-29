@@ -663,7 +663,12 @@ float Image::calculerEntropieImage() {
     }
     return -entropie;
 }
-
+/**
+ * \brief Génère la courbe de distorsion pour l'image SLICC.
+ * @param imgSLICC
+ * @param outputFilenameBase
+ * @param imgDeBase
+ */
 void Image::genererCourbeDistortion(Image &imgSLICC, const string &outputFilenameBase, Image &imgDeBase) {
     ofstream dataFile(outputFilenameBase + ".dat");
     if (!dataFile.is_open()) {
@@ -756,6 +761,77 @@ void Image::highlightContours(const vector<int> &labels) {
     cout << "fin highligth des contours" << endl;
 }
 
+/**
+ * \brief Génère une courbe de PSNR sur une image de base avec un K donné et un intervalle de M et  N.
+ * @param imgDeBase
+ * @param K
+ * @param minM
+ * @param maxM
+ * @param N
+ */
+void Image::genererCourbePSNR( Image &imgDeBase, int K, int minM, int maxM, int N) {
+    double PSNR = 0.;
+    bool contour = false;
+    string curbName = "./CourbePSNR" + std::to_string(K) + ".dat";
+    ofstream dataFile(curbName);
+    if (!dataFile.is_open()) {
+        cerr << "Erreur lors de l'ouverture du fichier de données pour la courbe de distortion." << endl;
+        return;
+    }
+    for (int m = minM; m <= maxM; m += 10) {
+        //dataFile << m ;
+        cout << "m=" << m << endl;
+        Image imgSLICC = imgDeBase.RGBtoLAB();
+        imgSLICC.SLICC(K, m, N, contour);
+        Image imgComp = imgSLICC.LABtoRGB();
+        PSNR = imgDeBase.PSNR(imgComp);
+        cout << "PSNR=" << PSNR << endl;
+        dataFile << m << ' ' << PSNR << ' ' << endl;
+    }
+
+    ofstream gnuplotScript("./CourbePSNR" + std::to_string(K) + ".plt");
+    if (!gnuplotScript.is_open()) {
+        cerr << "Erreur lors de l'ouverture du fichier de script GNUPLOT." << endl;
+        return;
+    }
+    gnuplotScript << "set terminal png size 800,600\n";
+    gnuplotScript << "set output '" << "CourbePSNR" << ".png'\n";
+    gnuplotScript << "set title 'PSNR en fonction de K et N'\n";
+    gnuplotScript << "set xlabel 'M'\n";
+    gnuplotScript << "set ylabel 'PSNR (dB)'\n";
+    gnuplotScript << "plot '" << curbName << "' with lines title 'PSNR en Fonction pour k=" << std::to_string(K)
+                  << "'\n";
+
+    gnuplotScript.close();
+
+    system(("gnuplot ./CourbePSNR" + std::to_string(K) + ".plt").c_str());
+}
+
+/**
+ * \brief Convertit une image RGB en PGM.
+ * @return L'image convertie au format PGM.
+ */
+Image Image::RGBtoPGM() {
+    Image img(filename, PGM);
+    img.width = width;
+    img.height = height;
+    img.size = size;
+    img.data = createData();
+    for (int i = 0; i < size; i += 3) {
+        // Calculer la luminance Y
+        float Y = 0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2];
+        img.data[i / 3] = static_cast<OCTET>(Y);
+    }
+    return img;
+}
+
+/**
+ * \brief Effectue la segmentation Super pixel par Mean Shift sur l'image.
+ * @param spatial_radius : Rayon spatial pour la recherche de voisins.
+ * @param color_radius  : Rayon colorimétrique pour la recherche de voisins.
+ * @param max_iterations  : Nombre maximum d'itérations pour la convergence.
+ * @return L'image segmentée en format LAB
+ */
 Image Image::MeanShiftSegmentation(float spatial_radius, float color_radius, int max_iterations) {
 
     cout << "Début de la segmentation par Mean Shift" << endl;
@@ -847,58 +923,3 @@ Image Image::MeanShiftSegmentation(float spatial_radius, float color_radius, int
     return result;
 }
 
-
-
-
-void Image::genererCourbePSNR(Image &imgLAB, Image &imgDeBase, int K, int minM, int maxM, int N) {
-    double PSNR = 0.;
-    bool contour = false;
-    string curbName = "./CourbePSNR" + std::to_string(K) + ".dat";
-    ofstream dataFile(curbName);
-    if (!dataFile.is_open()) {
-        cerr << "Erreur lors de l'ouverture du fichier de données pour la courbe de distortion." << endl;
-        return;
-    }
-    for (int m = minM; m <= maxM; m += 10) {
-        //dataFile << m ;
-        cout << "m=" << m << endl;
-        Image imgSLICC = imgDeBase.RGBtoLAB();
-        imgSLICC.SLICC(K, m, N, contour);
-        Image imgComp = imgSLICC.LABtoRGB();
-        PSNR = imgDeBase.PSNR(imgComp);
-        cout << "PSNR=" << PSNR << endl;
-        dataFile << m << ' ' << PSNR << ' ' << endl;
-    }
-
-    ofstream gnuplotScript("./CourbePSNR" + std::to_string(K) + ".plt");
-    if (!gnuplotScript.is_open()) {
-        cerr << "Erreur lors de l'ouverture du fichier de script GNUPLOT." << endl;
-        return;
-    }
-    gnuplotScript << "set terminal png size 800,600\n";
-    gnuplotScript << "set output '" << "CourbePSNR" << ".png'\n";
-    gnuplotScript << "set title 'PSNR en fonction de K et N'\n";
-    gnuplotScript << "set xlabel 'M'\n";
-    gnuplotScript << "set ylabel 'PSNR (dB)'\n";
-    gnuplotScript << "plot '" << curbName << "' with lines title 'PSNR en Fonction pour k=" << std::to_string(K)
-                  << "'\n";
-
-    gnuplotScript.close();
-
-    system(("gnuplot ./CourbePSNR" + std::to_string(K) + ".plt").c_str());
-}
-
-
-Image Image::RGBtoPGM() {
-    Image img(filename, PGM);
-    img.width = width;
-    img.height = height;
-    img.size = size;
-    img.data = createData();
-    for (int i = 0; i < size; i += 3) {
-        // Calculer la luminance Y
-        float Y = 0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2];
-        img.data[i / 3] = static_cast<OCTET>(Y);
-    }
-    return img;
-}

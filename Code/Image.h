@@ -61,7 +61,7 @@ public:
     void highlightContours(const vector<int> &labels);
     Image MeanShiftSegmentation(float spatial_radius, float color_radius, int max_iterations);
     int calculer_norme_gradian(int i, int j, Image &imgGRIS);
-    void genererCourbePSNR(Image &imgLAB, Image &imgDeBase, int K, int minM, int maxM, int N);
+    void genererCourbePSNR(Image &imgDeBase, int K, int minM, int maxM, int N);
 
     Image RGBtoPGM();
 private:
