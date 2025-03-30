@@ -303,7 +303,7 @@ float Image::calculerDistanceCouleur(ClusterCenter &cluster, int &i, int &j) {
     int index = getIndice(i, j, height, width) * 3;
     float dL = data[index] - cluster.Lk;
     float da = data[index + 1] - cluster.ak;
-    float db = data[index + 2]- cluster.bk;
+    float db = data[index + 2] - cluster.bk;
     return sqrt(dL * dL + da * da + db * db);
 }
 
@@ -454,20 +454,20 @@ void Image::SLICC(int &k, int &m, int &N, bool &contour) {
     //1.3 Placer les centres de clusters Ck sur une grille régulière (avec un léger ajustement pour éviter les bords).
     vector <ClusterCenter> clusters;
 
-    int indexCluster=0;
+    int indexCluster = 0;
     for (int y = S / 2; y < height; y += S) {
         for (int x = S / 2; x < width; x += S) {
             // x et y sont les coordonnées du centre du cluster au sein de la grille S
             // on place les centres des clusters sur la grille régulière S et on ajoute un pas de S/2 pour les placer au centre
 
-            int index=getIndice(y,x,height,width);
+            int index = getIndice(y, x, height, width);
             ClusterCenter clusterActuel;
-            clusterActuel.xk=x;
-            clusterActuel.yk=y;
+            clusterActuel.xk = x;
+            clusterActuel.yk = y;
             // on met dans le cluster les valeurs de couleur du pixel L a b
-            clusterActuel.Lk=data[index*3];
-            clusterActuel.ak=data[index*3+1];
-            clusterActuel.bk=data[index*3+2];
+            clusterActuel.Lk = data[index * 3];
+            clusterActuel.ak = data[index * 3 + 1];
+            clusterActuel.bk = data[index * 3 + 2];
             clusters.push_back(clusterActuel);
         }
     }
@@ -666,6 +666,7 @@ float Image::calculerEntropieImage() {
     }
     return -entropie;
 }
+
 /**
  * \brief Génère la courbe de distorsion pour l'image SLICC.
  * @param imgSLICC
@@ -772,27 +773,27 @@ void Image::highlightContours(const vector<int> &labels) {
  * @param maxM
  * @param N
  */
-void Image::genererCourbePSNR(Image &imgLAB, Image &imgDeBase, int K, int minM, int maxM, int N){
-    double PSNR=0.;
-    bool contour=false;
-    string curbName="./CourbePSNR"+std::to_string(K)+".dat";
+void Image::genererCourbePSNR(Image &imgLAB, Image &imgDeBase, int K, int minM, int maxM, int N) {
+    double PSNR = 0.;
+    bool contour = false;
+    string curbName = "./CourbePSNR" + std::to_string(K) + ".dat";
     ofstream dataFile(curbName);
     if (!dataFile.is_open()) {
         cerr << "Erreur lors de l'ouverture du fichier de données pour la courbe de distortion." << endl;
         return;
     }
-    for (int m=minM; m<=maxM; m+=10){
+    for (int m = minM; m <= maxM; m += 10) {
         //dataFile << m ;
-        cout << "m=" << m <<endl;
-        Image imgSLICC=imgDeBase.RGBtoLAB();
-        imgSLICC.SLICC(K,m,N,contour);
-        Image imgComp=imgSLICC.LABtoRGB();
-        PSNR=imgDeBase.PSNR(imgComp);
-        cout << "PSNR=" << PSNR <<endl;
+        cout << "m=" << m << endl;
+        Image imgSLICC = imgDeBase.RGBtoLAB();
+        imgSLICC.SLICC(K, m, N, contour);
+        Image imgComp = imgSLICC.LABtoRGB();
+        PSNR = imgDeBase.PSNR(imgComp);
+        cout << "PSNR=" << PSNR << endl;
         dataFile << m << ' ' << PSNR << ' ' << endl;
     }
 
-    ofstream gnuplotScript("./CourbePSNR"+std::to_string(K)+".plt");
+    ofstream gnuplotScript("./CourbePSNR" + std::to_string(K) + ".plt");
     if (!gnuplotScript.is_open()) {
         cerr << "Erreur lors de l'ouverture du fichier de script GNUPLOT." << endl;
         return;
@@ -802,29 +803,14 @@ void Image::genererCourbePSNR(Image &imgLAB, Image &imgDeBase, int K, int minM, 
     gnuplotScript << "set title 'PSNR en fonction de K et N'\n";
     gnuplotScript << "set xlabel 'M'\n";
     gnuplotScript << "set ylabel 'PSNR (dB)'\n";
-    gnuplotScript << "plot '" << curbName << "' with lines title 'PSNR en Fonction pour k=" << std::to_string(K)<< "'\n";
+    gnuplotScript << "plot '" << curbName << "' with lines title 'PSNR en Fonction pour k=" << std::to_string(K)
+                  << "'\n";
 
     gnuplotScript.close();
 
     system(("gnuplot ./CourbePSNR" + std::to_string(K) + ".plt").c_str());
 }
-/**
- * \brief Convertit une image RGB en PGM.
- * @return L'image convertie au format PGM.
- */
-Image Image::RGBtoPGM() {
-    Image img(filename, PGM);
-    img.width = width;
-    img.height = height;
-    img.size = size;
-    img.data = createData();
-    for (int i = 0; i < size; i += 3) {
-        // Calculer la luminance Y
-        float Y = 0.299 * data[i] + 0.587 * data[i + 1] + 0.114 * data[i + 2];
-        img.data[i / 3] = static_cast<OCTET>(Y);
-    }
-    return img;
-}
+
 
 /**
  * \brief Effectue la segmentation Super pixel par Mean Shift sur l'image.
@@ -833,18 +819,19 @@ Image Image::RGBtoPGM() {
  * @param max_iterations  : Nombre maximum d'itérations pour la convergence.
  * @return L'image segmentée en format LAB
  */
-Image Image::MeanShiftSegmentation(float spatial_radius, float color_radius, int max_iterations) {
+Image Image::MeanShiftSegmentation(float spatial_radius, float color_radius, int max_iterations, bool contour) {
 
     cout << "Début de la segmentation par Mean Shift" << endl;
-    vector<Point> points;
+    vector <Point> points;
     for (int i = 0; i < height; ++i) {
         for (int j = 0; j < width; ++j) {
             int index = getIndice(i, j, height, width) * 3;
-            points.push_back({(float)j, (float)i, (float)data[index], (float)data[index + 1], (float)data[index + 2]});
+            points.push_back(
+                    {(float) j, (float) i, (float) data[index], (float) data[index + 1], (float) data[index + 2]});
         }
     }
 
-    vector<Point> shifted_points = points;
+    vector <Point> shifted_points = points;
     float convergence_threshold = 1e-3;
     for (int iter = 0; iter < max_iterations; ++iter) {
         cout << "Iteration: " << iter + 1 << endl;
@@ -915,12 +902,69 @@ Image Image::MeanShiftSegmentation(float spatial_radius, float color_radius, int
     for (int i = 0; i < height; ++i) {
         for (int j = 0; j < width; ++j) {
             int index = getIndice(i, j, height, width);
-            result.data[index * 3] = (OCTET)shifted_points[index].L;
-            result.data[index * 3 + 1] = (OCTET)shifted_points[index].a;
-            result.data[index * 3 + 2] = (OCTET)shifted_points[index].b;
+            result.data[index * 3] = (OCTET) shifted_points[index].L;
+            result.data[index * 3 + 1] = (OCTET) shifted_points[index].a;
+            result.data[index * 3 + 2] = (OCTET) shifted_points[index].b;
         }
+    }
+
+    if (contour) {
+        this->highlightContoursPoints(shifted_points);
     }
 
     return result;
 }
 
+/**
+ * \brief Met en évidence les contours des superpixels dans l'image.
+ * @param points Liste des points des pixels.
+ */
+void Image::highlightContoursPoints(const vector<Point> &points) {
+
+    cout << "debut highligth des contours" << endl;
+    vector<int> contours(size / 3, 0);
+    // 5.2.2 Parcourir l'image pour détecter les contours
+    for (int i = 0; i < height; i++) {
+        for (int j = 0; j < width; j++) {
+            int index = getIndice(i, j, height, width);
+            for (int dx = -1; dx <= 1; dx++) {
+                for (int dy = -1; dy <= 1; dy++) {
+                    int nx = i + dx;
+                    int ny = j + dy;
+                    if (nx >= 0 && nx < height && ny >= 0 && ny < width) {
+                        int nIndex = getIndice(nx, ny, height, width);
+                        if (points[index].L != points[nIndex].L ||
+                            points[index].a != points[nIndex].a ||
+                            points[index].b != points[nIndex].b) {
+                            contours[index] = 1;
+                        }
+                    }
+                }
+            }
+        }
+    }
+    Image imgHighligthContours(filename, PPM);
+    imgHighligthContours.width = width;
+    imgHighligthContours.height = height;
+    imgHighligthContours.size = size;
+    imgHighligthContours.data = createData();
+
+    // 5.2.3 Mettre en évidence les contours
+    memcpy(imgHighligthContours.data, data, size * sizeof(OCTET));
+    for (int i = 0; i < height; i++) {
+        for (int j = 0; j < width; j++) {
+            int index = getIndice(i, j, height, width);
+            if (contours[index] == 1) {
+                imgHighligthContours.data[index * 3] = data[index * 3];
+                imgHighligthContours.data[index * 3 + 1] = data[index * 3 + 1];
+                imgHighligthContours.data[index * 3 + 2] = data[index * 3 + 2];
+            } else {
+                imgHighligthContours.data[index * 3] = 255;
+                imgHighligthContours.data[index * 3 + 1] = 255;
+                imgHighligthContours.data[index * 3 + 2] = 255;
+            }
+        }
+    }
+    ecrire_image_ppm(const_cast<char *>((filename.substr(0, filename.find_last_of('.')) + "_contours.ppm").c_str()),
+                     imgHighligthContours.data, height, width);
+}

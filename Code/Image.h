@@ -57,11 +57,11 @@ public:
     float calculerEntropieImage();
     void genererCourbeDistortion(Image &imgSLICC, const string &outputFilenameBase, Image &imgDeBase);
     void highlightContours(const vector<int> &labels);
-    Image MeanShiftSegmentation(float spatial_radius, float color_radius, int max_iterations);
+    void highlightContoursPoints(const vector<Point> &points);
+    Image MeanShiftSegmentation(float spatial_radius, float color_radius, int max_iterations, bool contour);
     int calculer_norme_gradian(int i, int j, Image &imgGRIS);
     void genererCourbePSNR(Image &imgLAB, Image &imgDeBase, int K, int minM, int maxM, int N);
 
-    Image RGBtoPGM();
 private:
     string filename;
     Format format;

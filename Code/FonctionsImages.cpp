@@ -35,7 +35,9 @@ void SLICC(int argc, char *argv[]) {
         Image imgOUT = imgLAB.LABtoRGB();
         //écriture de l'image Superpixels
         //ajoute dans la string SLIC juste avant le . le nombre de clusters et la résolution spatiale
-        string nomFichierSortieSLICC = nomFichierEntree.substr(0, nomFichierEntree.find_last_of('.')) + "_SLICC_" + to_string(k) + "_" + to_string(m) + ".ppm";
+        string nomFichierSortieSLICC =
+                nomFichierEntree.substr(0, nomFichierEntree.find_last_of('.')) + "_SLICC_" + to_string(k) + "_" +
+                to_string(m) + ".ppm";
         imgOUT.write(nomFichierSortieSLICC);
 
         if (compressSLICC) {
@@ -46,20 +48,24 @@ void SLICC(int argc, char *argv[]) {
     }
 
 
-    cout << "Fin SLICC" << endl;
+    if (genererMeanShift) {
+        float spatial_radius = 10.0f;
+        float color_radius = 10.0f;
+        int max_iterations = 100;
+
+        Image imgLAB = img.RGBtoLAB();
+        Image segmentedImg = imgLAB.MeanShiftSegmentation(spatial_radius, color_radius, max_iterations);
+
+        // Convert the segmented image back to RGB
+        Image resultImg = segmentedImg.LABtoRGB();
+
+        // Save the segmented image
+        string nomFichierSortieMean = nomFichierEntree.substr(0, nomFichierEntree.find_last_of('.')) + "_MeanShift.ppm";
+        resultImg.write(nomFichierSortieMean);
+    }
 
 
-//    // Perform Mean Shift Segmentation
-//    float spatial_radius = 10.0f;
-//    float color_radius = 10.0f;
-//    int max_iterations = 100;
-//    Image segmentedImg = imgLAB.MeanShiftSegmentation(spatial_radius, color_radius, max_iterations);
-//
-//    // Convert the segmented image back to RGB
-//    Image resultImg = segmentedImg.LABtoRGB();
-//
-//    // Save the segmented image
-//    resultImg.write(outputFilename);
+
 
 }
 
