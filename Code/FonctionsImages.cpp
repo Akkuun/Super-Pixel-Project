@@ -28,8 +28,8 @@ void SLICC(int argc, char *argv[]) {
     if (genererSLICC) {
         Image imgLAB = img.RGBtoLAB();
         imgLAB.write(nomFichierEntree);
-        int k = 200; // Nombre de clusters
-        int m = 20; //résolution spatiale
+        int k = 30 ; // Nombre de clusters
+        int m = 80; //résolution spatiale
         int N = img.getSize();
         imgLAB.SLICC(k, m, N, contourSLICC);
         Image imgOUT = imgLAB.LABtoRGB();
@@ -54,7 +54,7 @@ void SLICC(int argc, char *argv[]) {
         int max_iterations = 100;
 
         Image imgLAB = img.RGBtoLAB();
-        Image segmentedImg = imgLAB.MeanShiftSegmentation(spatial_radius, color_radius, max_iterations);
+        Image segmentedImg = imgLAB.MeanShiftSegmentation(spatial_radius, color_radius, max_iterations,contourMeanShift);
 
         // Convert the segmented image back to RGB
         Image resultImg = segmentedImg.LABtoRGB();

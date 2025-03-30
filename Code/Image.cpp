@@ -424,7 +424,8 @@ int Image::affecterSuperPixelVoisin(int x, int y, vector<int> &newLabels, vector
             int ny = y + dy;
             if (nx >= 0 && nx < height && ny >= 0 && ny < width) {
                 int nIndex = getIndice(nx, ny, height, width);
-                if (newLabels[nIndex] != newLabels[getIndice(x, y, height, width)]) {
+                int currentIndex = getIndice(x, y, height, width);
+                if (newLabels[nIndex] != newLabels[currentIndex]) {
                     float distance = calculerDistanceCouleur(clusters[newLabels[nIndex]], x, y);
                     if (distance < minDistance) {
                         minDistance = distance;
@@ -557,7 +558,7 @@ void Image::SLICC(int &k, int &m, int &N, bool &contour) {
 //         for (int j = 0; j < width; j++) {
 //             int index = getIndice(i, j, height, width);
 //             // Affecter au superpixel voisin le plus proche
-//             int bestLabel = affecterSuperPixelVoisin(i, j, newLabels, listeComposantesConnexes, labels, clusters);
+//                int bestLabel = affecterSuperPixelVoisin(i, j, newLabels, listeComposantesConnexes, labels, tailleSeuilMinimal, clusters);
 //             // si le pixel n'est pas affecté à un superpixel voisin, on le laisse tel quel
 //             if (bestLabel != -1) {
 //                 newLabels[index] = bestLabel;
@@ -819,29 +820,26 @@ void Image::genererCourbePSNR(Image &imgLAB, Image &imgDeBase, int K, int minM, 
  * @param max_iterations  : Nombre maximum d'itérations pour la convergence.
  * @return L'image segmentée en format LAB
  */
-Image Image::MeanShiftSegmentation(float spatial_radius, float color_radius, int max_iterations, bool contour) {
-
+Image Image::MeanShiftSegmentation(float spatial_radius, float color_radius, int max_iterations, bool contour) Image Image::MeanShiftSegmentation(float spatial_radius, float color_radius, int max_iterations, bool contour) {
     cout << "Début de la segmentation par Mean Shift" << endl;
-    vector <Point> points;
+    vector<Point> points(height * width);
     for (int i = 0; i < height; ++i) {
         for (int j = 0; j < width; ++j) {
             int index = getIndice(i, j, height, width) * 3;
-            points.push_back(
-                    {(float) j, (float) i, (float) data[index], (float) data[index + 1], (float) data[index + 2]});
+            points[i * width + j] = {(float) j, (float) i, (float) data[index], (float) data[index + 1], (float) data[index + 2]};
         }
     }
 
-    vector <Point> shifted_points = points;
+    vector<Point> shifted_points = points;
     float convergence_threshold = 1e-3;
     for (int iter = 0; iter < max_iterations; ++iter) {
         cout << "Iteration: " << iter + 1 << endl;
         bool converged = true;
 
-        // Parcours de chaque pixel
+        #pragma omp parallel for
         for (size_t i = 0; i < points.size(); ++i) {
             float sum_x = 0, sum_y = 0, sum_L = 0, sum_a = 0, sum_b = 0, weight_sum = 0;
 
-            // Recherche des pixels voisins dans un rayon spatial donné
             for (size_t j = 0; j < points.size(); ++j) {
                 float dx = points[i].x - points[j].x;
                 float dy = points[i].y - points[j].y;
@@ -852,10 +850,8 @@ Image Image::MeanShiftSegmentation(float spatial_radius, float color_radius, int
                 float db = points[i].b - points[j].b;
                 float color_dist = dL * dL + da * da + db * db;
 
-                // Vérification si le pixel est dans la fenêtre de voisinage
                 if (spatial_dist < spatial_radius * spatial_radius && color_dist < color_radius * color_radius) {
-                    float weight = exp(-spatial_dist / (2 * spatial_radius * spatial_radius) -
-                                       color_dist / (2 * color_radius * color_radius));
+                    float weight = exp(-spatial_dist / (2 * spatial_radius * spatial_radius) - color_dist / (2 * color_radius * color_radius));
                     sum_x += points[j].x * weight;
                     sum_y += points[j].y * weight;
                     sum_L += points[j].L * weight;
@@ -865,16 +861,11 @@ Image Image::MeanShiftSegmentation(float spatial_radius, float color_radius, int
                 }
             }
 
-            // Mise à jour du point
             if (weight_sum > 0) {
-                Point new_point = {sum_x / weight_sum, sum_y / weight_sum,
-                                   sum_L / weight_sum, sum_a / weight_sum, sum_b / weight_sum};
+                Point new_point = {sum_x / weight_sum, sum_y / weight_sum, sum_L / weight_sum, sum_a / weight_sum, sum_b / weight_sum};
 
-                // Vérification de la convergence
-                float dist = sqrt(pow(new_point.x - shifted_points[i].x, 2) +
-                                  pow(new_point.y - shifted_points[i].y, 2) +
-                                  pow(new_point.L - shifted_points[i].L, 2) +
-                                  pow(new_point.a - shifted_points[i].a, 2) +
+                float dist = sqrt(pow(new_point.x - shifted_points[i].x, 2) + pow(new_point.y - shifted_points[i].y, 2) +
+                                  pow(new_point.L - shifted_points[i].L, 2) + pow(new_point.a - shifted_points[i].a, 2) +
                                   pow(new_point.b - shifted_points[i].b, 2));
 
                 if (dist > convergence_threshold) {
@@ -889,16 +880,16 @@ Image Image::MeanShiftSegmentation(float spatial_radius, float color_radius, int
             break;
         }
 
-        points = shifted_points; // Mise à jour des points pour l'itération suivante
+        points = shifted_points;
     }
 
-    // Création de l'image segmentée
     Image result(filename, format);
     result.width = width;
     result.height = height;
     result.size = size;
     result.data = createData();
 
+    #pragma omp parallel for
     for (int i = 0; i < height; ++i) {
         for (int j = 0; j < width; ++j) {
             int index = getIndice(i, j, height, width);
@@ -914,7 +905,6 @@ Image Image::MeanShiftSegmentation(float spatial_radius, float color_radius, int
 
     return result;
 }
-
 /**
  * \brief Met en évidence les contours des superpixels dans l'image.
  * @param points Liste des points des pixels.
