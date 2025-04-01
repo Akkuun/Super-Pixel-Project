@@ -28,8 +28,8 @@ void SLICC(int argc, char *argv[]) {
     if (genererSLICC) {
         Image imgLAB = img.RGBtoLAB();
         imgLAB.write(nomFichierEntree);
-        int k = 30 ; // Nombre de clusters
-        int m = 80; //résolution spatiale
+        int k = 700 ; // Nombre de clusters
+        int m = 55; //résolution spatiale
         int N = img.getSize();
         imgLAB.SLICC(k, m, N, contourSLICC);
         Image imgOUT = imgLAB.LABtoRGB();

@@ -439,33 +439,18 @@ int Image::affecterSuperPixelVoisin(int x, int y, vector<int> &newLabels, vector
     return bestLabel;
 }
 
-/**
- * \brief Applique l'algorithme SLICC sur l'image.
- * \param k Nombre de clusters -> plus l'image est grande, plus on augmente.
- * \param m Paramètre de compacité.
- * \param N Nombre de pixels de l'image.
- */
 void Image::SLICC(int &k, int &m, int &N, bool &contour) {
     // PHASE 1 : Initialisation
-    //1.1 Convertir l’image RGB en CIELab. -> ok
-    //1.2 Définir le nombre de superpixels souhaité et calculer le pas de grille avec S = sqrt(N / k).
-    // N / k donne le nombre total de super pixel présent dans la grille donc on fait sqrt pour récupérer la longueur du carré de S
     float S = sqrt(static_cast<float>(N) / k);
     cout << "Initialisation des centres de clusters" << endl;
-    //1.3 Placer les centres de clusters Ck sur une grille régulière (avec un léger ajustement pour éviter les bords).
     vector <ClusterCenter> clusters;
 
-    int indexCluster = 0;
     for (int y = S / 2; y < height; y += S) {
         for (int x = S / 2; x < width; x += S) {
-            // x et y sont les coordonnées du centre du cluster au sein de la grille S
-            // on place les centres des clusters sur la grille régulière S et on ajoute un pas de S/2 pour les placer au centre
-
             int index = getIndice(y, x, height, width);
             ClusterCenter clusterActuel;
             clusterActuel.xk = x;
             clusterActuel.yk = y;
-            // on met dans le cluster les valeurs de couleur du pixel L a b
             clusterActuel.Lk = data[index * 3];
             clusterActuel.ak = data[index * 3 + 1];
             clusterActuel.bk = data[index * 3 + 2];
@@ -475,29 +460,24 @@ void Image::SLICC(int &k, int &m, int &N, bool &contour) {
 
     cout << "fin initilisation des centres de clusters" << endl;
 
-    //1.4 Initialiser la matrice des labels (indices des centres)  L(x, y) à -1 et la matrice des distances   D(x, y) à INF
-    // dans notre cas les labels sont les indices des clusters
-    vector<int> labels(width * height, -1); // 3 composantes par pixel
+    vector<int> labels(width * height, -1);
     vector<float> distances(width * height, INFINITY);
 
-    //1.5 Initialiser le seuil de convergence ΔCk
     float seuil = 0.1;
     float deltaCk = 0;
     float lastDeltaCk = INFINITY;
     int iteration = 0;
     cout << "debut convergence des centres de clusters" << endl;
-    //3.2 Répéter **PHASE 2 et 3** jusqu'à convergence (ΔCk < seuil)
+
     while (std::abs(lastDeltaCk - deltaCk) > seuil) {
         lastDeltaCk = deltaCk;
         deltaCk = 0;
         iteration += 1;
-        //2.1 Pour chaque centre de cluster C_k
+
 #pragma omp parallel for
         for (int i = 0; i < clusters.size(); i++) {
-            //2.2 Pour chaque pixel P(x, y) dans une fenêtre 2S x 2S autour de C_k
             for (int dx = -S; dx <= S; dx++) {
                 for (int dy = -S; dy <= S; dy++) {
-                    //2.3 Calculer la distance D(P, C_k) entre le pixel P et le centre C_k
                     int x = clusters[i].xk + dx;
                     int y = clusters[i].yk + dy;
                     if (x >= 0 && x < width && y >= 0 && y < height) {
@@ -516,10 +496,8 @@ void Image::SLICC(int &k, int &m, int &N, bool &contour) {
         }
 
 #pragma omp parallel for reduction(+:deltaCk)
-        // PHASE 3 : Mise à jour des centres des superpixels
         for (int cluster = 0; cluster < k; cluster++) {
             float newL, newa, newb, newx, newy, newDeltaCk;
-            //3.1 Calculer le nouveau centre C_k en moyennant les pixels lui appartenant.
             calculerNouveauCentre(clusters, labels, cluster, newL, newa, newb, newx, newy, newDeltaCk);
 
             clusters[cluster].Lk = newL;
@@ -527,50 +505,13 @@ void Image::SLICC(int &k, int &m, int &N, bool &contour) {
             clusters[cluster].bk = newb;
             clusters[cluster].xk = newx;
             clusters[cluster].yk = newy;
-            //3.3 Calculer la variation ΔCk du centre C_k
             deltaCk += newDeltaCk;
         }
         cout << "Iteration: " << iteration << ", deltaCk: " << deltaCk << endl;
     }
     cout << "convergence atteinte" << endl;
 
-//     // PHASE 4 : Correction de la connectivité (SLICC spécifique)
-//     vector<int> listeComposantesConnexes;
-//     vector<int> newLabels(size / 3, -1);
-//     int label = 0;
-//     cout << "debut de la correction de la connectivié via floodFill" << endl;
-// // 4.1 Parcourir l'image pour détecter les superpixels non connexes
-//     for (int i = 0; i < height; i++) {
-//         for (int j = 0; j < width; j++) {
-//             int index = getIndice(i, j, height, width);
-//             if (newLabels[index] == -1) {
-//                 // Effectuer un flood fill pour identifier les composantes connexes
-//                 listeComposantesConnexes.push_back(floodFill(i, j, newLabels, label, labels));
-//                 label++;
-//             }
-//         }
-//     }
-//     cout << "fin de la correction de la connectivié via floodFill" << endl;
-//     cout << "debut fusion des petis segments" << endl;
-// //// 4.2 Fusionner les petits segments TODO A DECOMMENTER POUR FLOOD FILL
-//     int tailleSeuilMinimal = size / (3 * k);
-//     for (int i = 0; i < height; i++) {
-//         for (int j = 0; j < width; j++) {
-//             int index = getIndice(i, j, height, width);
-//             // Affecter au superpixel voisin le plus proche
-//                int bestLabel = affecterSuperPixelVoisin(i, j, newLabels, listeComposantesConnexes, labels, tailleSeuilMinimal, clusters);
-//             // si le pixel n'est pas affecté à un superpixel voisin, on le laisse tel quel
-//             if (bestLabel != -1) {
-//                 newLabels[index] = bestLabel;
-//             }
-//         }
-//     }
-//     cout << "fin fusion des petis segments" << endl;
-//     // Mettre à jour les labels
-//     labels = newLabels;
-
     // PHASE 5 : Coloration des superpixels
-    //5.1 Colorer les superpixels avec la moyenne des couleurs de leurs pixels.
 #pragma omp parallel for collapse(2)
     for (int i = 0; i < height; i++) {
         for (int j = 0; j < width; j++) {
@@ -584,7 +525,6 @@ void Image::SLICC(int &k, int &m, int &N, bool &contour) {
     if (contour) {
         this->highlightContours(labels);
     }
-
 
     cout << "Fin SLICC" << endl;
 }
@@ -820,23 +760,24 @@ void Image::genererCourbePSNR(Image &imgLAB, Image &imgDeBase, int K, int minM, 
  * @param max_iterations  : Nombre maximum d'itérations pour la convergence.
  * @return L'image segmentée en format LAB
  */
-Image Image::MeanShiftSegmentation(float spatial_radius, float color_radius, int max_iterations, bool contour) Image Image::MeanShiftSegmentation(float spatial_radius, float color_radius, int max_iterations, bool contour) {
+Image Image::MeanShiftSegmentation(float spatial_radius, float color_radius, int max_iterations, bool contour) {
     cout << "Début de la segmentation par Mean Shift" << endl;
-    vector<Point> points(height * width);
+    vector <Point> points(height * width);
     for (int i = 0; i < height; ++i) {
         for (int j = 0; j < width; ++j) {
             int index = getIndice(i, j, height, width) * 3;
-            points[i * width + j] = {(float) j, (float) i, (float) data[index], (float) data[index + 1], (float) data[index + 2]};
+            points[i * width + j] = {(float) j, (float) i, (float) data[index], (float) data[index + 1],
+                                     (float) data[index + 2]};
         }
     }
 
-    vector<Point> shifted_points = points;
+    vector <Point> shifted_points = points;
     float convergence_threshold = 1e-3;
     for (int iter = 0; iter < max_iterations; ++iter) {
         cout << "Iteration: " << iter + 1 << endl;
         bool converged = true;
 
-        #pragma omp parallel for
+#pragma omp parallel for
         for (size_t i = 0; i < points.size(); ++i) {
             float sum_x = 0, sum_y = 0, sum_L = 0, sum_a = 0, sum_b = 0, weight_sum = 0;
 
@@ -851,7 +792,8 @@ Image Image::MeanShiftSegmentation(float spatial_radius, float color_radius, int
                 float color_dist = dL * dL + da * da + db * db;
 
                 if (spatial_dist < spatial_radius * spatial_radius && color_dist < color_radius * color_radius) {
-                    float weight = exp(-spatial_dist / (2 * spatial_radius * spatial_radius) - color_dist / (2 * color_radius * color_radius));
+                    float weight = exp(-spatial_dist / (2 * spatial_radius * spatial_radius) -
+                                       color_dist / (2 * color_radius * color_radius));
                     sum_x += points[j].x * weight;
                     sum_y += points[j].y * weight;
                     sum_L += points[j].L * weight;
@@ -862,11 +804,13 @@ Image Image::MeanShiftSegmentation(float spatial_radius, float color_radius, int
             }
 
             if (weight_sum > 0) {
-                Point new_point = {sum_x / weight_sum, sum_y / weight_sum, sum_L / weight_sum, sum_a / weight_sum, sum_b / weight_sum};
+                Point new_point = {sum_x / weight_sum, sum_y / weight_sum, sum_L / weight_sum, sum_a / weight_sum,
+                                   sum_b / weight_sum};
 
-                float dist = sqrt(pow(new_point.x - shifted_points[i].x, 2) + pow(new_point.y - shifted_points[i].y, 2) +
-                                  pow(new_point.L - shifted_points[i].L, 2) + pow(new_point.a - shifted_points[i].a, 2) +
-                                  pow(new_point.b - shifted_points[i].b, 2));
+                float dist = sqrt(
+                        pow(new_point.x - shifted_points[i].x, 2) + pow(new_point.y - shifted_points[i].y, 2) +
+                        pow(new_point.L - shifted_points[i].L, 2) + pow(new_point.a - shifted_points[i].a, 2) +
+                        pow(new_point.b - shifted_points[i].b, 2));
 
                 if (dist > convergence_threshold) {
                     converged = false;
@@ -889,7 +833,7 @@ Image Image::MeanShiftSegmentation(float spatial_radius, float color_radius, int
     result.size = size;
     result.data = createData();
 
-    #pragma omp parallel for
+#pragma omp parallel for
     for (int i = 0; i < height; ++i) {
         for (int j = 0; j < width; ++j) {
             int index = getIndice(i, j, height, width);
@@ -905,11 +849,12 @@ Image Image::MeanShiftSegmentation(float spatial_radius, float color_radius, int
 
     return result;
 }
+
 /**
  * \brief Met en évidence les contours des superpixels dans l'image.
  * @param points Liste des points des pixels.
  */
-void Image::highlightContoursPoints(const vector<Point> &points) {
+void Image::highlightContoursPoints(const vector <Point> &points) {
 
     cout << "debut highligth des contours" << endl;
     vector<int> contours(size / 3, 0);
