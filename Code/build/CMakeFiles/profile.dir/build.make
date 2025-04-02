@@ -68,7 +68,7 @@ include CMakeFiles/profile.dir/progress.make
 
 CMakeFiles/profile:
 	/usr/bin/cmake -DCMAKE_CXX_FLAGS="-fprofile-generate" -P /home/mathis/Documents/M1_IMAGINE/SuperPixelProjet/Code/build/CMakeFiles/profile.cmake
-	./testFonction
+	./turboPixelProjet
 	mv *.gcda *.gcno /home/mathis/Documents/M1_IMAGINE/SuperPixelProjet/Code/build/obj 2>/dev/null || true
 
 profile: CMakeFiles/profile

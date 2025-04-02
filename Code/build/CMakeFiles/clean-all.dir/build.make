@@ -68,7 +68,7 @@ include CMakeFiles/clean-all.dir/progress.make
 
 CMakeFiles/clean-all:
 	/usr/bin/cmake -E remove_directory /home/mathis/Documents/M1_IMAGINE/SuperPixelProjet/Code/build/obj
-	/usr/bin/cmake -E remove testFonction *.gcda *.gcno
+	/usr/bin/cmake -E remove turboPixelProjet *.gcda *.gcno
 
 clean-all: CMakeFiles/clean-all
 clean-all: CMakeFiles/clean-all.dir/build.make
