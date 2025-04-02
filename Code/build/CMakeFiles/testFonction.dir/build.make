@@ -140,6 +140,7 @@ testFonction: CMakeFiles/testFonction.dir/main.cpp.o
 testFonction: CMakeFiles/testFonction.dir/Image.cpp.o
 testFonction: CMakeFiles/testFonction.dir/image_ppm.cpp.o
 testFonction: CMakeFiles/testFonction.dir/build.make
+testFonction: /usr/lib/x86_64-linux-gnu/libfltk.so
 testFonction: CMakeFiles/testFonction.dir/link.txt
 	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --green --bold --progress-dir=/home/mathis/Documents/M1_IMAGINE/SuperPixelProjet/Code/build/CMakeFiles --progress-num=$(CMAKE_PROGRESS_5) "Linking CXX executable testFonction"
 	$(CMAKE_COMMAND) -E cmake_link_script CMakeFiles/testFonction.dir/link.txt --verbose=$(VERBOSE)
