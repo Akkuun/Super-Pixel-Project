@@ -1,0 +1,1 @@
+/usr/bin/c++  -Wall -std=gnu++17 -O3 -march=native -flto -funroll-loops -fopenmp  -flto -fopenmp CMakeFiles/testFonction.dir/FonctionsImages.cpp.o CMakeFiles/testFonction.dir/main.cpp.o CMakeFiles/testFonction.dir/Image.cpp.o CMakeFiles/testFonction.dir/image_ppm.cpp.o -o testFonction 

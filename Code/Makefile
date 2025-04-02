@@ -10,7 +10,7 @@ OBJ_DIR = obj
 # Files
 SRC_FILES = $(SRC_DIR)/FonctionsImages.cpp $(SRC_DIR)/main.cpp $(SRC_DIR)/Image.cpp $(SRC_DIR)/image_ppm.cpp
 OBJ_FILES = $(patsubst $(SRC_DIR)/%.cpp, $(OBJ_DIR)/%.o, $(SRC_FILES))
-EXEC = testFonction
+EXEC = testFosi nction
 
 # Targets
 all: $(EXEC)

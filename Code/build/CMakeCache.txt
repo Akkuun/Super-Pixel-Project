@@ -145,7 +145,7 @@ CMAKE_PROJECT_DESCRIPTION:STATIC=
 CMAKE_PROJECT_HOMEPAGE_URL:STATIC=
 
 //Value Computed by CMake
-CMAKE_PROJECT_NAME:STATIC=MyProject
+CMAKE_PROJECT_NAME:STATIC=TestFonction
 
 //Path to a program.
 CMAKE_RANLIB:FILEPATH=/usr/bin/ranlib
@@ -210,13 +210,13 @@ CMAKE_STRIP:FILEPATH=/usr/bin/strip
 CMAKE_VERBOSE_MAKEFILE:BOOL=FALSE
 
 //Value Computed by CMake
-MyProject_BINARY_DIR:STATIC=/home/mathis/Documents/M1_IMAGINE/SuperPixelProjet/Code/build
+TestFonction_BINARY_DIR:STATIC=/home/mathis/Documents/M1_IMAGINE/SuperPixelProjet/Code/build
 
 //Value Computed by CMake
-MyProject_IS_TOP_LEVEL:STATIC=ON
+TestFonction_IS_TOP_LEVEL:STATIC=ON
 
 //Value Computed by CMake
-MyProject_SOURCE_DIR:STATIC=/home/mathis/Documents/M1_IMAGINE/SuperPixelProjet/Code
+TestFonction_SOURCE_DIR:STATIC=/home/mathis/Documents/M1_IMAGINE/SuperPixelProjet/Code
 
 
 ########################
