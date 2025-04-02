@@ -9,8 +9,9 @@
 *.iml
 *.swp
 
-# Exclure le dossier imageSorties
+# Exclure le dossier ImageSorties
 imageSorties/
+Image/rendu
 
 # Exclure les fichiers de compilation et binaires
 *.o
