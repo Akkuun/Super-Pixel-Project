@@ -28,3 +28,10 @@ imageSorties/
 *.cache
 *.DS_Store
 Thumbs.db
+
+# Exclure les répertoires de build de CMake
+/build/
+CMakeFiles/
+CMakeCache.txt
+cmake_install.cmake
+Makefile
