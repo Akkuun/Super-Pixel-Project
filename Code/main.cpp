@@ -22,6 +22,15 @@ int m = 55;
 float spatial_radius = 10.0f;
 float color_radius = 10.0f;
 int max_iterations = 100;
+Fl_Button* process_button;
+
+void update_process_button() {
+    if (!selected_file.empty() && (genererSLICC || genererMeanShift)) {
+        process_button->activate();
+    } else {
+        process_button->deactivate();
+    }
+}
 
 void choose_file(Fl_Widget* w, void* data) {
     Fl_File_Chooser chooser(".", "*.{ppm}", Fl_File_Chooser::SINGLE, "Choose an Image");
@@ -33,6 +42,7 @@ void choose_file(Fl_Widget* w, void* data) {
         selected_file = chooser.value();
         Fl_Box* box = (Fl_Box*)data;
         box->label(selected_file.c_str());
+        update_process_button();
     }
 }
 
@@ -82,6 +92,7 @@ void toggle_genererSLICC(Fl_Widget* w, void* data) {
             inputs[i]->deactivate();
         }
     }
+    update_process_button();
 }
 
 void toggle_genererMeanShift(Fl_Widget* w, void* data) {
@@ -94,6 +105,7 @@ void toggle_genererMeanShift(Fl_Widget* w, void* data) {
             inputs[i]->deactivate();
         }
     }
+    update_process_button();
 }
 
 int main(int argc, char** argv) {
@@ -119,7 +131,7 @@ int main(int argc, char** argv) {
     Fl_Input* color_input = new Fl_Input(300, 210, 100, 30, "Color Radius:");
     color_input->deactivate();
 
-    Fl_Button* process_button = new Fl_Button(10, 250, 100, 30, "Process Image");
+    process_button = new Fl_Button(10, 250, 100, 30, "Process Image");
     Fl_Progress* progress = new Fl_Progress(120, 250, 470, 30);
     progress->minimum(0);
     progress->maximum(100);
@@ -133,6 +145,7 @@ int main(int argc, char** argv) {
     compress_slicc_button->deactivate();
     mean_shift_button->callback(toggle_genererMeanShift, mean_shift_inputs);
     contour_mean_shift_button->deactivate();
+    process_button->callback(process_image, progress);
     process_button->deactivate();
 
     window->end();
