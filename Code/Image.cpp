@@ -10,6 +10,7 @@
 #include <fstream>
 #include <cfloat>
 #include <algorithm>
+#include <array>
 
 using namespace std;
 
@@ -902,4 +903,127 @@ void Image::highlightContoursPoints(const vector <Point> &points) {
     }
     ecrire_image_ppm(const_cast<char *>((filename.substr(0, filename.find_last_of('.')) + "_contours.ppm").c_str()),
                      imgHighligthContours.data, height, width);
+}
+
+bool testConvergence(vector<array<int, 3>> centroids, vector<array<int, 3>> newCentroid){
+	for(int i=0; i<centroids.size(); i++){
+		if(centroids[i][0]-newCentroid[i][0]>=0.1 && centroids[i][1]-newCentroid[i][1]>=0.1 && centroids[i][2]-newCentroid[i][2]>=0.1){
+			return false;
+		}
+	}
+	return true;
+}
+
+void Image::kmean(Image &ImgIn, Image& ImgOUT, vector<array<int, 3>> centroids){
+    //vector<array<int, 3>> pixel;
+	int indexMin;
+	for(int i=0; i<ImgIn.getSize(); i+=3){
+		indexMin=0;
+        array<int, 3> pixel = {ImgIn.data[i * 3],ImgIn.data[i * 3 + 1],ImgIn.data[i * 3 + 2]};
+        int indexMin = 0;
+        float d2norm = numeric_limits<float>::max();
+
+		for (int centroid = 0; centroid < centroids.size(); centroid++) {
+            float d1norm = sqrt(
+                pow(static_cast<int>(centroids[centroid][0]) - static_cast<int>(pixel[0]), 2) +
+                pow(static_cast<int>(centroids[centroid][1]) - static_cast<int>(pixel[1]), 2) +
+                pow(static_cast<int>(centroids[centroid][2]) - static_cast<int>(pixel[2]), 2)
+            );
+
+            if (d1norm < d2norm) {
+                d2norm = d1norm;
+                indexMin = centroid;
+            }
+        }
+		ImgOUT.data[i]=centroids[indexMin][0];
+		ImgOUT.data[i+1]=centroids[indexMin][1];
+		ImgOUT.data[i+2]=centroids[indexMin][2];
+	}
+}
+
+void Image::compressionPallette(Image &imgSuperPixel, Image &imgCompCouleur, Image &imgComNB) {
+    vector<vector<array<int, 3>>> clusters;
+    vector<array<int, 3>> centroids;
+    
+    bool converged = false;
+
+    while (!converged) {
+        clusters.assign(centroids.size(), vector<array<int, 3>>());
+
+        for (int i = 0; i < imgSuperPixel.getSize(); i++) {
+            array<int, 3> pixel = {
+                imgSuperPixel.data[i * 3],
+                imgSuperPixel.data[i * 3 + 1],
+                imgSuperPixel.data[i * 3 + 2]
+            };
+
+            int indexMin = 0;
+            float distanceMin = numeric_limits<float>::max();
+
+            for (int centroid = 0; centroid < centroids.size(); centroid++) {
+                float distance = sqrt(
+                    pow(static_cast<int>(centroids[centroid][0]) - static_cast<int>(pixel[0]), 2) +
+                    pow(static_cast<int>(centroids[centroid][1]) - static_cast<int>(pixel[1]), 2) +
+                    pow(static_cast<int>(centroids[centroid][2]) - static_cast<int>(pixel[2]), 2)
+                );
+                
+
+                if (distance < distanceMin) {
+                    distanceMin = distance;
+                    indexMin = centroid;
+                }
+            }
+            clusters[indexMin].push_back(pixel);
+        }
+
+        vector<array<int, 3>> newCentroids;
+
+        for (int i = 0; i < clusters.size(); i++) {
+            if (clusters[i].empty()) {
+                newCentroids.push_back(centroids[i]);
+            } else {
+                int sommeRed = 0, sommeGreen = 0, sommeBlue = 0;
+
+                for (const auto &pixel : clusters[i]) {
+                    sommeRed += pixel[0];
+                    sommeGreen += pixel[1];
+                    sommeBlue += pixel[2];
+                }
+
+                newCentroids.push_back({
+                    sommeRed / static_cast<int>(clusters[i].size()),
+                    sommeGreen / static_cast<int>(clusters[i].size()),
+                    sommeBlue / static_cast<int>(clusters[i].size())
+                });
+            }
+        }
+
+        converged = testConvergence(centroids, newCentroids);
+        centroids = newCentroids;
+    }
+
+    kmean(imgSuperPixel, imgCompCouleur, centroids);
+
+    for (int index = 0; index < imgSuperPixel.getSize(); index++) {
+        array<int, 3> pixel = {
+            imgCompCouleur.data[index * 3],
+            imgCompCouleur.data[index * 3 + 1],
+            imgCompCouleur.data[index * 3 + 2]
+        };
+
+        for (int i = 0; i < centroids.size(); i++) {
+            if (pixel == centroids[i]) {
+                imgComNB.data[index] = static_cast<unsigned char>(i);
+                break;
+            }
+        }
+    }
+
+    for (int i = 0; i < imgSuperPixel.getSize(); i++) {
+        int index = imgComNB.data[i];
+
+        imgCompCouleur.data[i * 3] = centroids[index][0];
+        imgCompCouleur.data[i * 3 + 1] = centroids[index][1];
+        imgCompCouleur.data[i * 3 + 2] = centroids[index][2];
+    }
 }

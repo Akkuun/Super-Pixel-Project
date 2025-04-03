@@ -61,6 +61,8 @@ public:
     Image MeanShiftSegmentation(float spatial_radius, float color_radius, int max_iterations, bool contour);
     int calculer_norme_gradian(int i, int j, Image &imgGRIS);
     void genererCourbePSNR(Image &imgLAB, Image &imgDeBase, int K, int minM, int maxM, int N);
+    void compressionPallette(Image &imgSuperPixel, Image &imgCompCouleur, Image &imgComNB);
+    void kmean(Image &ImgIn, Image& ImgOUT, vector<array<int, 3>> centroids);
 
 private:
     string filename;
