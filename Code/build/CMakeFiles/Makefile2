@@ -63,7 +63,7 @@ CMAKE_BINARY_DIR = /home/mathis/Documents/M1_IMAGINE/SuperPixelProjet/Code/build
 # Directory level rules for the build root directory
 
 # The main recursive "all" target.
-all: CMakeFiles/MyProject.dir/all
+all: CMakeFiles/turboPixelProjet.dir/all
 .PHONY : all
 
 # The main recursive "preinstall" target.
@@ -71,34 +71,115 @@ preinstall:
 .PHONY : preinstall
 
 # The main recursive "clean" target.
-clean: CMakeFiles/MyProject.dir/clean
+clean: CMakeFiles/turboPixelProjet.dir/clean
+clean: CMakeFiles/profile.dir/clean
+clean: CMakeFiles/optimize.dir/clean
+clean: CMakeFiles/clean-all.dir/clean
 .PHONY : clean
 
 #=============================================================================
-# Target rules for target CMakeFiles/MyProject.dir
+# Target rules for target CMakeFiles/turboPixelProjet.dir
 
 # All Build rule for target.
-CMakeFiles/MyProject.dir/all:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/MyProject.dir/build.make CMakeFiles/MyProject.dir/depend
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/MyProject.dir/build.make CMakeFiles/MyProject.dir/build
-	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --progress-dir=/home/mathis/Documents/M1_IMAGINE/SuperPixelProjet/Code/build/CMakeFiles --progress-num=1,2,3,4,5 "Built target MyProject"
-.PHONY : CMakeFiles/MyProject.dir/all
+CMakeFiles/turboPixelProjet.dir/all:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/turboPixelProjet.dir/build.make CMakeFiles/turboPixelProjet.dir/depend
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/turboPixelProjet.dir/build.make CMakeFiles/turboPixelProjet.dir/build
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --progress-dir=/home/mathis/Documents/M1_IMAGINE/SuperPixelProjet/Code/build/CMakeFiles --progress-num=1,2,3,4,5 "Built target turboPixelProjet"
+.PHONY : CMakeFiles/turboPixelProjet.dir/all
 
 # Build rule for subdir invocation for target.
-CMakeFiles/MyProject.dir/rule: cmake_check_build_system
+CMakeFiles/turboPixelProjet.dir/rule: cmake_check_build_system
 	$(CMAKE_COMMAND) -E cmake_progress_start /home/mathis/Documents/M1_IMAGINE/SuperPixelProjet/Code/build/CMakeFiles 5
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 CMakeFiles/MyProject.dir/all
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 CMakeFiles/turboPixelProjet.dir/all
 	$(CMAKE_COMMAND) -E cmake_progress_start /home/mathis/Documents/M1_IMAGINE/SuperPixelProjet/Code/build/CMakeFiles 0
-.PHONY : CMakeFiles/MyProject.dir/rule
+.PHONY : CMakeFiles/turboPixelProjet.dir/rule
 
 # Convenience name for target.
-MyProject: CMakeFiles/MyProject.dir/rule
-.PHONY : MyProject
+turboPixelProjet: CMakeFiles/turboPixelProjet.dir/rule
+.PHONY : turboPixelProjet
 
 # clean rule for target.
-CMakeFiles/MyProject.dir/clean:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/MyProject.dir/build.make CMakeFiles/MyProject.dir/clean
-.PHONY : CMakeFiles/MyProject.dir/clean
+CMakeFiles/turboPixelProjet.dir/clean:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/turboPixelProjet.dir/build.make CMakeFiles/turboPixelProjet.dir/clean
+.PHONY : CMakeFiles/turboPixelProjet.dir/clean
+
+#=============================================================================
+# Target rules for target CMakeFiles/profile.dir
+
+# All Build rule for target.
+CMakeFiles/profile.dir/all:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/profile.dir/build.make CMakeFiles/profile.dir/depend
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/profile.dir/build.make CMakeFiles/profile.dir/build
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --progress-dir=/home/mathis/Documents/M1_IMAGINE/SuperPixelProjet/Code/build/CMakeFiles --progress-num= "Built target profile"
+.PHONY : CMakeFiles/profile.dir/all
+
+# Build rule for subdir invocation for target.
+CMakeFiles/profile.dir/rule: cmake_check_build_system
+	$(CMAKE_COMMAND) -E cmake_progress_start /home/mathis/Documents/M1_IMAGINE/SuperPixelProjet/Code/build/CMakeFiles 0
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 CMakeFiles/profile.dir/all
+	$(CMAKE_COMMAND) -E cmake_progress_start /home/mathis/Documents/M1_IMAGINE/SuperPixelProjet/Code/build/CMakeFiles 0
+.PHONY : CMakeFiles/profile.dir/rule
+
+# Convenience name for target.
+profile: CMakeFiles/profile.dir/rule
+.PHONY : profile
+
+# clean rule for target.
+CMakeFiles/profile.dir/clean:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/profile.dir/build.make CMakeFiles/profile.dir/clean
+.PHONY : CMakeFiles/profile.dir/clean
+
+#=============================================================================
+# Target rules for target CMakeFiles/optimize.dir
+
+# All Build rule for target.
+CMakeFiles/optimize.dir/all:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/optimize.dir/build.make CMakeFiles/optimize.dir/depend
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/optimize.dir/build.make CMakeFiles/optimize.dir/build
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --progress-dir=/home/mathis/Documents/M1_IMAGINE/SuperPixelProjet/Code/build/CMakeFiles --progress-num= "Built target optimize"
+.PHONY : CMakeFiles/optimize.dir/all
+
+# Build rule for subdir invocation for target.
+CMakeFiles/optimize.dir/rule: cmake_check_build_system
+	$(CMAKE_COMMAND) -E cmake_progress_start /home/mathis/Documents/M1_IMAGINE/SuperPixelProjet/Code/build/CMakeFiles 0
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 CMakeFiles/optimize.dir/all
+	$(CMAKE_COMMAND) -E cmake_progress_start /home/mathis/Documents/M1_IMAGINE/SuperPixelProjet/Code/build/CMakeFiles 0
+.PHONY : CMakeFiles/optimize.dir/rule
+
+# Convenience name for target.
+optimize: CMakeFiles/optimize.dir/rule
+.PHONY : optimize
+
+# clean rule for target.
+CMakeFiles/optimize.dir/clean:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/optimize.dir/build.make CMakeFiles/optimize.dir/clean
+.PHONY : CMakeFiles/optimize.dir/clean
+
+#=============================================================================
+# Target rules for target CMakeFiles/clean-all.dir
+
+# All Build rule for target.
+CMakeFiles/clean-all.dir/all:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/clean-all.dir/build.make CMakeFiles/clean-all.dir/depend
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/clean-all.dir/build.make CMakeFiles/clean-all.dir/build
+	@$(CMAKE_COMMAND) -E cmake_echo_color --switch=$(COLOR) --progress-dir=/home/mathis/Documents/M1_IMAGINE/SuperPixelProjet/Code/build/CMakeFiles --progress-num= "Built target clean-all"
+.PHONY : CMakeFiles/clean-all.dir/all
+
+# Build rule for subdir invocation for target.
+CMakeFiles/clean-all.dir/rule: cmake_check_build_system
+	$(CMAKE_COMMAND) -E cmake_progress_start /home/mathis/Documents/M1_IMAGINE/SuperPixelProjet/Code/build/CMakeFiles 0
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 CMakeFiles/clean-all.dir/all
+	$(CMAKE_COMMAND) -E cmake_progress_start /home/mathis/Documents/M1_IMAGINE/SuperPixelProjet/Code/build/CMakeFiles 0
+.PHONY : CMakeFiles/clean-all.dir/rule
+
+# Convenience name for target.
+clean-all: CMakeFiles/clean-all.dir/rule
+.PHONY : clean-all
+
+# clean rule for target.
+CMakeFiles/clean-all.dir/clean:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/clean-all.dir/build.make CMakeFiles/clean-all.dir/clean
+.PHONY : CMakeFiles/clean-all.dir/clean
 
 #=============================================================================
 # Special targets to cleanup operation of make.

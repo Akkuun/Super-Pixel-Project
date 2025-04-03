@@ -9,8 +9,9 @@
 *.iml
 *.swp
 
-# Exclure le dossier imageSorties
+# Exclure le dossier ImageSorties
 imageSorties/
+Image/rendu
 
 # Exclure les fichiers de compilation et binaires
 *.o
@@ -28,3 +29,10 @@ imageSorties/
 *.cache
 *.DS_Store
 Thumbs.db
+
+# Exclure les répertoires de build de CMake
+/build/
+CMakeFiles/
+CMakeCache.txt
+cmake_install.cmake
+Makefile

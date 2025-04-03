@@ -1,0 +1,87 @@
+{
+	"configurations" : 
+	[
+		{
+			"directories" : 
+			[
+				{
+					"build" : ".",
+					"jsonFile" : "directory-.-Debug-f5ebdc15457944623624.json",
+					"minimumCMakeVersion" : 
+					{
+						"string" : "3.10"
+					},
+					"projectIndex" : 0,
+					"source" : ".",
+					"targetIndexes" : 
+					[
+						0,
+						1,
+						2,
+						3
+					]
+				}
+			],
+			"name" : "Debug",
+			"projects" : 
+			[
+				{
+					"directoryIndexes" : 
+					[
+						0
+					],
+					"name" : "TestFonction",
+					"targetIndexes" : 
+					[
+						0,
+						1,
+						2,
+						3
+					]
+				}
+			],
+			"targets" : 
+			[
+				{
+					"directoryIndex" : 0,
+					"id" : "clean-all::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-clean-all-Debug-cc61d5922d15bf3f93cb.json",
+					"name" : "clean-all",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 0,
+					"id" : "optimize::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-optimize-Debug-423004e9f5dcda2364e6.json",
+					"name" : "optimize",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 0,
+					"id" : "profile::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-profile-Debug-a9ed0cfd32f1dc21d07f.json",
+					"name" : "profile",
+					"projectIndex" : 0
+				},
+				{
+					"directoryIndex" : 0,
+					"id" : "turboPixelProjet::@6890427a1f51a3e7e1df",
+					"jsonFile" : "target-turboPixelProjet-Debug-651f67ad20e23388266a.json",
+					"name" : "turboPixelProjet",
+					"projectIndex" : 0
+				}
+			]
+		}
+	],
+	"kind" : "codemodel",
+	"paths" : 
+	{
+		"build" : "/home/mathis/Documents/M1_IMAGINE/SuperPixelProjet/Code/cmake-build-debug",
+		"source" : "/home/mathis/Documents/M1_IMAGINE/SuperPixelProjet/Code"
+	},
+	"version" : 
+	{
+		"major" : 2,
+		"minor" : 7
+	}
+}

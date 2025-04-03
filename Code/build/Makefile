@@ -117,24 +117,63 @@ depend:
 .PHONY : depend
 
 #=============================================================================
-# Target rules for targets named MyProject
+# Target rules for targets named turboPixelProjet
 
 # Build rule for target.
-MyProject: cmake_check_build_system
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 MyProject
-.PHONY : MyProject
+turboPixelProjet: cmake_check_build_system
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 turboPixelProjet
+.PHONY : turboPixelProjet
 
 # fast build rule for target.
-MyProject/fast:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/MyProject.dir/build.make CMakeFiles/MyProject.dir/build
-.PHONY : MyProject/fast
+turboPixelProjet/fast:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/turboPixelProjet.dir/build.make CMakeFiles/turboPixelProjet.dir/build
+.PHONY : turboPixelProjet/fast
+
+#=============================================================================
+# Target rules for targets named profile
+
+# Build rule for target.
+profile: cmake_check_build_system
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 profile
+.PHONY : profile
+
+# fast build rule for target.
+profile/fast:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/profile.dir/build.make CMakeFiles/profile.dir/build
+.PHONY : profile/fast
+
+#=============================================================================
+# Target rules for targets named optimize
+
+# Build rule for target.
+optimize: cmake_check_build_system
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 optimize
+.PHONY : optimize
+
+# fast build rule for target.
+optimize/fast:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/optimize.dir/build.make CMakeFiles/optimize.dir/build
+.PHONY : optimize/fast
+
+#=============================================================================
+# Target rules for targets named clean-all
+
+# Build rule for target.
+clean-all: cmake_check_build_system
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/Makefile2 clean-all
+.PHONY : clean-all
+
+# fast build rule for target.
+clean-all/fast:
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/clean-all.dir/build.make CMakeFiles/clean-all.dir/build
+.PHONY : clean-all/fast
 
 FonctionsImages.o: FonctionsImages.cpp.o
 .PHONY : FonctionsImages.o
 
 # target to build an object file
 FonctionsImages.cpp.o:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/MyProject.dir/build.make CMakeFiles/MyProject.dir/FonctionsImages.cpp.o
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/turboPixelProjet.dir/build.make CMakeFiles/turboPixelProjet.dir/FonctionsImages.cpp.o
 .PHONY : FonctionsImages.cpp.o
 
 FonctionsImages.i: FonctionsImages.cpp.i
@@ -142,7 +181,7 @@ FonctionsImages.i: FonctionsImages.cpp.i
 
 # target to preprocess a source file
 FonctionsImages.cpp.i:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/MyProject.dir/build.make CMakeFiles/MyProject.dir/FonctionsImages.cpp.i
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/turboPixelProjet.dir/build.make CMakeFiles/turboPixelProjet.dir/FonctionsImages.cpp.i
 .PHONY : FonctionsImages.cpp.i
 
 FonctionsImages.s: FonctionsImages.cpp.s
@@ -150,7 +189,7 @@ FonctionsImages.s: FonctionsImages.cpp.s
 
 # target to generate assembly for a file
 FonctionsImages.cpp.s:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/MyProject.dir/build.make CMakeFiles/MyProject.dir/FonctionsImages.cpp.s
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/turboPixelProjet.dir/build.make CMakeFiles/turboPixelProjet.dir/FonctionsImages.cpp.s
 .PHONY : FonctionsImages.cpp.s
 
 Image.o: Image.cpp.o
@@ -158,7 +197,7 @@ Image.o: Image.cpp.o
 
 # target to build an object file
 Image.cpp.o:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/MyProject.dir/build.make CMakeFiles/MyProject.dir/Image.cpp.o
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/turboPixelProjet.dir/build.make CMakeFiles/turboPixelProjet.dir/Image.cpp.o
 .PHONY : Image.cpp.o
 
 Image.i: Image.cpp.i
@@ -166,7 +205,7 @@ Image.i: Image.cpp.i
 
 # target to preprocess a source file
 Image.cpp.i:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/MyProject.dir/build.make CMakeFiles/MyProject.dir/Image.cpp.i
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/turboPixelProjet.dir/build.make CMakeFiles/turboPixelProjet.dir/Image.cpp.i
 .PHONY : Image.cpp.i
 
 Image.s: Image.cpp.s
@@ -174,7 +213,7 @@ Image.s: Image.cpp.s
 
 # target to generate assembly for a file
 Image.cpp.s:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/MyProject.dir/build.make CMakeFiles/MyProject.dir/Image.cpp.s
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/turboPixelProjet.dir/build.make CMakeFiles/turboPixelProjet.dir/Image.cpp.s
 .PHONY : Image.cpp.s
 
 image_ppm.o: image_ppm.cpp.o
@@ -182,7 +221,7 @@ image_ppm.o: image_ppm.cpp.o
 
 # target to build an object file
 image_ppm.cpp.o:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/MyProject.dir/build.make CMakeFiles/MyProject.dir/image_ppm.cpp.o
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/turboPixelProjet.dir/build.make CMakeFiles/turboPixelProjet.dir/image_ppm.cpp.o
 .PHONY : image_ppm.cpp.o
 
 image_ppm.i: image_ppm.cpp.i
@@ -190,7 +229,7 @@ image_ppm.i: image_ppm.cpp.i
 
 # target to preprocess a source file
 image_ppm.cpp.i:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/MyProject.dir/build.make CMakeFiles/MyProject.dir/image_ppm.cpp.i
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/turboPixelProjet.dir/build.make CMakeFiles/turboPixelProjet.dir/image_ppm.cpp.i
 .PHONY : image_ppm.cpp.i
 
 image_ppm.s: image_ppm.cpp.s
@@ -198,7 +237,7 @@ image_ppm.s: image_ppm.cpp.s
 
 # target to generate assembly for a file
 image_ppm.cpp.s:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/MyProject.dir/build.make CMakeFiles/MyProject.dir/image_ppm.cpp.s
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/turboPixelProjet.dir/build.make CMakeFiles/turboPixelProjet.dir/image_ppm.cpp.s
 .PHONY : image_ppm.cpp.s
 
 main.o: main.cpp.o
@@ -206,7 +245,7 @@ main.o: main.cpp.o
 
 # target to build an object file
 main.cpp.o:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/MyProject.dir/build.make CMakeFiles/MyProject.dir/main.cpp.o
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/turboPixelProjet.dir/build.make CMakeFiles/turboPixelProjet.dir/main.cpp.o
 .PHONY : main.cpp.o
 
 main.i: main.cpp.i
@@ -214,7 +253,7 @@ main.i: main.cpp.i
 
 # target to preprocess a source file
 main.cpp.i:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/MyProject.dir/build.make CMakeFiles/MyProject.dir/main.cpp.i
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/turboPixelProjet.dir/build.make CMakeFiles/turboPixelProjet.dir/main.cpp.i
 .PHONY : main.cpp.i
 
 main.s: main.cpp.s
@@ -222,7 +261,7 @@ main.s: main.cpp.s
 
 # target to generate assembly for a file
 main.cpp.s:
-	$(MAKE) $(MAKESILENT) -f CMakeFiles/MyProject.dir/build.make CMakeFiles/MyProject.dir/main.cpp.s
+	$(MAKE) $(MAKESILENT) -f CMakeFiles/turboPixelProjet.dir/build.make CMakeFiles/turboPixelProjet.dir/main.cpp.s
 .PHONY : main.cpp.s
 
 # Help Target
@@ -233,7 +272,10 @@ help:
 	@echo "... depend"
 	@echo "... edit_cache"
 	@echo "... rebuild_cache"
-	@echo "... MyProject"
+	@echo "... clean-all"
+	@echo "... optimize"
+	@echo "... profile"
+	@echo "... turboPixelProjet"
 	@echo "... FonctionsImages.o"
 	@echo "... FonctionsImages.i"
 	@echo "... FonctionsImages.s"

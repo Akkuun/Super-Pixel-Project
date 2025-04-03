@@ -1,3 +1,6 @@
-/home/mathis/Documents/M1_IMAGINE/SuperPixelProjet/Code/build/CMakeFiles/MyProject.dir
+/home/mathis/Documents/M1_IMAGINE/SuperPixelProjet/Code/build/CMakeFiles/turboPixelProjet.dir
+/home/mathis/Documents/M1_IMAGINE/SuperPixelProjet/Code/build/CMakeFiles/profile.dir
+/home/mathis/Documents/M1_IMAGINE/SuperPixelProjet/Code/build/CMakeFiles/optimize.dir
+/home/mathis/Documents/M1_IMAGINE/SuperPixelProjet/Code/build/CMakeFiles/clean-all.dir
 /home/mathis/Documents/M1_IMAGINE/SuperPixelProjet/Code/build/CMakeFiles/edit_cache.dir
 /home/mathis/Documents/M1_IMAGINE/SuperPixelProjet/Code/build/CMakeFiles/rebuild_cache.dir
