@@ -6,6 +6,9 @@
 #include <FL/Fl_Check_Button.H>
 #include <FL/Fl_Progress.H>
 #include <FL/Fl_Input.H>
+#include <FL/Fl_RGB_Image.H>
+#include <fstream>
+#include <vector>
 #include <iostream>
 #include "Image.h"
 
@@ -23,6 +26,8 @@ float spatial_radius = 10.0f;
 float color_radius = 10.0f;
 int max_iterations = 100;
 Fl_Button* process_button;
+Fl_Box* image_box;
+Fl_RGB_Image* displayed_image = nullptr; // Global variable to store the image
 
 void update_process_button() {
     if (!selected_file.empty() && (genererSLICC || genererMeanShift)) {
@@ -30,6 +35,38 @@ void update_process_button() {
     } else {
         process_button->deactivate();
     }
+}
+
+Fl_RGB_Image* loadPPM(const char* filename) {
+    ifstream file(filename, ios::binary);
+    if (!file) {
+        cerr << "Erreur : Impossible d'ouvrir " << filename << endl;
+        return nullptr;
+    }
+
+    string format;
+    int width, height, maxVal;
+
+    file >> format;
+    if (format != "P6") {
+        cerr << "Format non supporté : " << format << endl;
+        return nullptr;
+    }
+
+
+
+    file >> width >> height >> maxVal;
+    file.ignore(); // Sauter le caractère de nouvelle ligne
+
+    if (maxVal != 255) {
+        cerr << "Seuls les fichiers avec une plage de 255 sont supportés" << endl;
+        return nullptr;
+    }
+
+    vector<unsigned char> pixels(width * height * 3);
+    file.read(reinterpret_cast<char*>(pixels.data()), pixels.size());
+
+    return new Fl_RGB_Image(pixels.data(), width, height, 3);
 }
 
 void choose_file(Fl_Widget* w, void* data) {
@@ -68,6 +105,15 @@ void process_image(Fl_Widget* w, void* data) {
             Image imgOUTLAB = imgOUT.RGBtoLAB();
             img.genererCourbePSNR(imgLAB, img, k, 10, 50, N);
         }
+
+        if (displayed_image) {
+            delete displayed_image; // Delete the previous image to avoid memory leak
+        }
+        displayed_image = loadPPM(nomFichierSortieSLICC.c_str());
+        if (displayed_image) {
+            image_box->image(displayed_image);
+            image_box->redraw();
+        }
     }
 
     if (genererMeanShift) {
@@ -76,6 +122,15 @@ void process_image(Fl_Widget* w, void* data) {
         Image resultImg = segmentedImg.LABtoRGB();
         string nomFichierSortieMean = selected_file.substr(0, selected_file.find_last_of('.')) + "_MeanShift.ppm";
         resultImg.write(nomFichierSortieMean);
+
+        if (displayed_image) {
+            delete displayed_image; // Delete the previous image to avoid memory leak
+        }
+        displayed_image = loadPPM(nomFichierSortieMean.c_str());
+        if (displayed_image) {
+            image_box->image(displayed_image);
+            image_box->redraw();
+        }
     }
 
     Fl_Progress* progress = (Fl_Progress*)data;
@@ -109,7 +164,7 @@ void toggle_genererMeanShift(Fl_Widget* w, void* data) {
 }
 
 int main(int argc, char** argv) {
-    Fl_Window* window = new Fl_Window(600, 600, "Image Processing");
+    Fl_Window* window = new Fl_Window(800, 800, "Image Processing");
 
     Fl_Button* choose_button = new Fl_Button(10, 10, 100, 30, "Choose Image");
     Fl_Box* file_box = new Fl_Box(120, 10, 470, 30, "No file chosen");
@@ -135,6 +190,8 @@ int main(int argc, char** argv) {
     Fl_Progress* progress = new Fl_Progress(120, 250, 470, 30);
     progress->minimum(0);
     progress->maximum(100);
+
+    image_box = new Fl_Box(10, 300, 780, 480);
 
     Fl_Input* slicc_inputs[] = {k_input, m_input};
     Fl_Input* mean_shift_inputs[] = {spatial_input, color_input};
