@@ -1211,7 +1211,7 @@
 				}
 			],
 			"type" : "INTERNAL",
-			"value" : "[fltk_images;fltk_forms;fltk_gl;/usr/lib/x86_64-linux-gnu/libGL.so;fltk][/usr/lib/fltk;/usr/include][fluid][v()]"
+			"value" : "[fltk_images;fltk_forms;fltk_gl;fltk][/usr/lib/fltk;/usr/include][fluid][v()]"
 		},
 		{
 			"name" : "FIND_PACKAGE_MESSAGE_DETAILS_OpenGL",

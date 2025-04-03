@@ -1,5 +1,10 @@
 cmake_minimum_required(VERSION 3.10)
 
+# Set policy CMP0072 to NEW to prefer GLVND
+if(POLICY CMP0072)
+    cmake_policy(SET CMP0072 NEW)
+endif()
+
 # Project name
 project(TestFonction)
 

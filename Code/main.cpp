@@ -10,6 +10,7 @@
 #include <fstream>
 #include <vector>
 #include <iostream>
+#include <FL/Fl_Int_Input.H>
 #include "Image.h"
 
 using namespace std;
@@ -30,7 +31,9 @@ Fl_Box* image_box;
 Fl_RGB_Image* displayed_image = nullptr; // Global variable to store the image
 
 void update_process_button() {
-    if (!selected_file.empty() && (genererSLICC || genererMeanShift)) {
+    bool slicc_ready = genererSLICC && !selected_file.empty();
+    bool mean_shift_ready = genererMeanShift && !selected_file.empty() ;
+    if (slicc_ready || mean_shift_ready) {
         process_button->activate();
     } else {
         process_button->deactivate();
@@ -96,6 +99,10 @@ void process_image(Fl_Widget* w, void* data) {
         Image imgLAB = img.RGBtoLAB();
         imgLAB.write(selected_file);
         int N = img.getSize();
+        //si les paramètres k et m sont vides, on gardes les valeur par défaut, sinon on prendre les valeurs des champs
+
+
+
         imgLAB.SLICC(k, m, N, contourSLICC);
         Image imgOUT = imgLAB.LABtoRGB();
         string nomFichierSortieSLICC = selected_file.substr(0, selected_file.find_last_of('.')) + "_SLICC_" + to_string(k) + "_" + to_string(m) + ".ppm";
@@ -173,17 +180,18 @@ int main(int argc, char** argv) {
     Fl_Check_Button* contour_slicc_button = new Fl_Check_Button(10, 90, 150, 30, "Contour SLICC");
     Fl_Check_Button* compress_slicc_button = new Fl_Check_Button(10, 130, 150, 30, "Compress SLICC");
 
-    Fl_Input* k_input = new Fl_Input(300, 50, 100, 30, "k:");
+    Fl_Input* k_input = new Fl_Int_Input(300, 50, 100, 30, "k:");
+
     k_input->deactivate();
-    Fl_Input* m_input = new Fl_Input(300, 90, 100, 30, "m:");
+    Fl_Input* m_input = new Fl_Int_Input(300, 90, 100, 30, "m:");
     m_input->deactivate();
 
     Fl_Check_Button* mean_shift_button = new Fl_Check_Button(10, 170, 150, 30, "Generate Mean Shift");
     Fl_Check_Button* contour_mean_shift_button = new Fl_Check_Button(10, 210, 150, 30, "Contour Mean Shift");
 
-    Fl_Input* spatial_input = new Fl_Input(300, 170, 100, 30, "Spatial Radius:");
+    Fl_Input* spatial_input = new Fl_Int_Input(300, 170, 100, 30, "Spatial Radius:");
     spatial_input->deactivate();
-    Fl_Input* color_input = new Fl_Input(300, 210, 100, 30, "Color Radius:");
+    Fl_Input* color_input = new Fl_Int_Input(300, 210, 100, 30, "Color Radius:");
     color_input->deactivate();
 
     process_button = new Fl_Button(10, 250, 100, 30, "Process Image");
@@ -204,6 +212,13 @@ int main(int argc, char** argv) {
     contour_mean_shift_button->deactivate();
     process_button->callback(process_image, progress);
     process_button->deactivate();
+
+    k_input->callback([](Fl_Widget* w, void* data) {
+        k = atoi(((Fl_Input*)w)->value());
+    });
+    m_input->callback([](Fl_Widget* w, void* data) {
+        m = atoi(((Fl_Input*)w)->value());
+    });
 
     window->end();
     window->show(argc, argv);
