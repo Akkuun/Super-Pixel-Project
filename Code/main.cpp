@@ -220,6 +220,13 @@ int main(int argc, char** argv) {
         m = atoi(((Fl_Input*)w)->value());
     });
 
+    spatial_input->callback([](Fl_Widget* w, void* data) {
+        spatial_radius = atof(((Fl_Input*)w)->value());
+    });
+    color_input->callback([](Fl_Widget* w, void* data) {
+        color_radius = atof(((Fl_Input*)w)->value());
+    });
+
     window->end();
     window->show(argc, argv);
     return Fl::run();
