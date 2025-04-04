@@ -10,7 +10,6 @@
 #include <fstream>
 #include <cfloat>
 #include <algorithm>
-#include <array>
 
 using namespace std;
 
@@ -905,7 +904,7 @@ void Image::highlightContoursPoints(const vector <Point> &points) {
                      imgHighligthContours.data, height, width);
 }
 
-bool testConvergence(vector<array<int, 3>> centroids, vector<array<int, 3>> newCentroid){
+bool testConvergence(vector<vector<int>> centroids, vector<vector<int>> newCentroid){
 	for(int i=0; i<centroids.size(); i++){
 		if(centroids[i][0]-newCentroid[i][0]>=0.1 && centroids[i][1]-newCentroid[i][1]>=0.1 && centroids[i][2]-newCentroid[i][2]>=0.1){
 			return false;
@@ -914,18 +913,16 @@ bool testConvergence(vector<array<int, 3>> centroids, vector<array<int, 3>> newC
 	return true;
 }
 
-void Image::kmean(Image &ImgIn, Image& ImgOUT, vector<array<int, 3>> centroids){
-    //vector<array<int, 3>> pixel;
+void Image::kmean(OCTET* ImgIn, OCTET* ImgOUT, vector<vector<int>> centroids){
 	int indexMin;
-	for(int i=0; i<ImgIn.getSize(); i+=3){
+	for(int i=0; i<size; i+=3){
 		indexMin=0;
-        array<int, 3> pixel = {ImgIn.data[i * 3],ImgIn.data[i * 3 + 1],ImgIn.data[i * 3 + 2]};
-        int indexMin = 0;
+        vector<int> pixel = {ImgIn[i],ImgIn[i+1],ImgIn[i+2]};
         float d2norm = numeric_limits<float>::max();
 
 		for (int centroid = 0; centroid < centroids.size(); centroid++) {
             float d1norm = sqrt(
-                pow(static_cast<int>(centroids[centroid][0]) - static_cast<int>(pixel[0]), 2) +
+                pow((centroids[centroid][0]) - (pixel[0]), 2) +
                 pow(static_cast<int>(centroids[centroid][1]) - static_cast<int>(pixel[1]), 2) +
                 pow(static_cast<int>(centroids[centroid][2]) - static_cast<int>(pixel[2]), 2)
             );
@@ -935,26 +932,42 @@ void Image::kmean(Image &ImgIn, Image& ImgOUT, vector<array<int, 3>> centroids){
                 indexMin = centroid;
             }
         }
-		ImgOUT.data[i]=centroids[indexMin][0];
-		ImgOUT.data[i+1]=centroids[indexMin][1];
-		ImgOUT.data[i+2]=centroids[indexMin][2];
+		ImgOUT[i]=centroids[indexMin][0];
+		ImgOUT[i + 1]=centroids[indexMin][1];
+		ImgOUT[i + 2]=centroids[indexMin][2];
 	}
 }
 
-void Image::compressionPallette(Image &imgSuperPixel, Image &imgCompCouleur, Image &imgComNB) {
-    vector<vector<array<int, 3>>> clusters;
-    vector<array<int, 3>> centroids;
-    
+void Image::compressionPallette(Image &imgSuperPixel, const string &outputFilenameBase) {
+    vector<vector<vector<int>>> clusters;
+    vector<vector<int>> centroids;
+
+    OCTET* dataImgOUT = createData();
+    OCTET* dataImgCompCouleur = createData();
+    OCTET* dataImgCompNB = createData();
+
+    int iteration = 1;
+
+    // Initialisation des centroids
+    for (int i = 0; i < 256; i++) {
+        centroids.push_back({rand() % 256, rand() % 256, rand() % 256});
+    }
+
+    // Initialisation des clusters
+    clusters.resize(centroids.size());
+
     bool converged = false;
 
-    while (!converged) {
-        clusters.assign(centroids.size(), vector<array<int, 3>>());
+    cout << "Début Compression" << endl;
+    cout << "Début Convergence" << endl;
 
-        for (int i = 0; i < imgSuperPixel.getSize(); i++) {
-            array<int, 3> pixel = {
-                imgSuperPixel.data[i * 3],
-                imgSuperPixel.data[i * 3 + 1],
-                imgSuperPixel.data[i * 3 + 2]
+    while (!converged) {
+
+        for (int i = 0; i < size; i+=3) {
+            vector<int> pixel = {
+                imgSuperPixel.data[i],
+                imgSuperPixel.data[i + 1],
+                imgSuperPixel.data[i + 2]
             };
 
             int indexMin = 0;
@@ -962,28 +975,28 @@ void Image::compressionPallette(Image &imgSuperPixel, Image &imgCompCouleur, Ima
 
             for (int centroid = 0; centroid < centroids.size(); centroid++) {
                 float distance = sqrt(
-                    pow(static_cast<int>(centroids[centroid][0]) - static_cast<int>(pixel[0]), 2) +
-                    pow(static_cast<int>(centroids[centroid][1]) - static_cast<int>(pixel[1]), 2) +
-                    pow(static_cast<int>(centroids[centroid][2]) - static_cast<int>(pixel[2]), 2)
+                    pow(centroids[centroid][0] - pixel[0], 2) +
+                    pow(centroids[centroid][1] - pixel[1], 2) +
+                    pow(centroids[centroid][2] - pixel[2], 2)
                 );
-                
 
                 if (distance < distanceMin) {
                     distanceMin = distance;
                     indexMin = centroid;
                 }
             }
-            clusters[indexMin].push_back(pixel);
+
+            if (indexMin < clusters.size()) {
+                clusters[indexMin].push_back(pixel);
+            }
         }
 
-        vector<array<int, 3>> newCentroids;
-
+        vector<vector<int>> newCentroids;
         for (int i = 0; i < clusters.size(); i++) {
             if (clusters[i].empty()) {
                 newCentroids.push_back(centroids[i]);
             } else {
                 int sommeRed = 0, sommeGreen = 0, sommeBlue = 0;
-
                 for (const auto &pixel : clusters[i]) {
                     sommeRed += pixel[0];
                     sommeGreen += pixel[1];
@@ -998,32 +1011,68 @@ void Image::compressionPallette(Image &imgSuperPixel, Image &imgCompCouleur, Ima
             }
         }
 
+        cout << "Itération " << iteration << endl;
+
         converged = testConvergence(centroids, newCentroids);
         centroids = newCentroids;
+        iteration++;
     }
 
-    kmean(imgSuperPixel, imgCompCouleur, centroids);
+    cout << "Fin Convergence" << endl;    
 
-    for (int index = 0; index < imgSuperPixel.getSize(); index++) {
-        array<int, 3> pixel = {
-            imgCompCouleur.data[index * 3],
-            imgCompCouleur.data[index * 3 + 1],
-            imgCompCouleur.data[index * 3 + 2]
+    cout << "Début Kmean" << endl;
+    kmean(imgSuperPixel.getData(), dataImgOUT, centroids);
+    cout << "Fin Kmean" << endl;
+
+    for (int index = 0; index < size; index+=3) {
+        vector<int> pixel = {
+            dataImgOUT[index],
+            dataImgOUT[index + 1],
+            dataImgOUT[index + 2]
         };
 
         for (int i = 0; i < centroids.size(); i++) {
-            if (pixel == centroids[i]) {
-                imgComNB.data[index] = static_cast<unsigned char>(i);
-                break;
-            }
+            if (pixel[0]==centroids[i][0]&&pixel[1]==centroids[i][1]&&pixel[2]==centroids[i][2]){
+				dataImgCompNB[index/3]=i;
+			}
         }
     }
 
-    for (int i = 0; i < imgSuperPixel.getSize(); i++) {
-        int index = imgComNB.data[i];
+    for (int i = 0; i < size; i+=3) {
+        int index = dataImgCompNB[i/3];
+        dataImgCompCouleur[i] = centroids[index][0];
+        dataImgCompCouleur[i+1] = centroids[index][1];
+        dataImgCompCouleur[i+2] = centroids[index][2];
+    }
 
-        imgCompCouleur.data[i * 3] = centroids[index][0];
-        imgCompCouleur.data[i * 3 + 1] = centroids[index][1];
-        imgCompCouleur.data[i * 3 + 2] = centroids[index][2];
+    string nomFichierSortieCompNB = outputFilenameBase.substr(0, outputFilenameBase.find_last_of('.')) + "_CompNB.pgm";
+    string nomFichierSortieCompPPM = outputFilenameBase.substr(0, outputFilenameBase.find_last_of('.')) + "_CompPPM.ppm";
+    string nomFichierSortieCompOUT = outputFilenameBase.substr(0, outputFilenameBase.find_last_of('.')) + "_CompOUT.ppm";
+
+    Image imgCompresseNB = Image(nomFichierSortieCompNB, Image::PGM);
+    Image imgCompressePPM = Image(nomFichierSortieCompPPM, Image::PPM);
+    Image imgCompresseOUT = Image(nomFichierSortieCompOUT, Image::PPM);
+
+    imgCompresseOUT.width = width;
+    imgCompresseOUT.height = height;
+    imgCompresseOUT.size = size;
+    imgCompresseOUT.data = copyData(dataImgOUT, size);
+
+    imgCompressePPM.width = width;
+    imgCompressePPM.height = height;
+    imgCompressePPM.size = size;
+    imgCompressePPM.data = copyData(dataImgCompCouleur, size);
+
+    imgCompresseNB.width = width;
+    imgCompresseNB.height = height;
+    imgCompresseNB.size = imgSuperPixel.getSize();
+    imgCompresseNB.data = copyData(dataImgCompNB, imgSuperPixel.getSize());
+
+    imgCompresseNB.write(nomFichierSortieCompNB);
+    imgCompressePPM.write(nomFichierSortieCompPPM);
+    imgCompresseOUT.write(nomFichierSortieCompOUT);
+
+    for (int i = 0; i < size/3; i++) {
+        cout << "Pixel " << i << "=" << dataImgCompNB[i] << endl;
     }
 }
