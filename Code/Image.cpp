@@ -942,9 +942,28 @@ void Image::compressionPallette(Image &imgSuperPixel, const string &outputFilena
     vector<vector<vector<int>>> clusters;
     vector<vector<int>> centroids;
 
-    OCTET* dataImgOUT = createData();
-    OCTET* dataImgCompCouleur = createData();
-    OCTET* dataImgCompNB = createData();
+    string nomFichierSortieCompNB = outputFilenameBase.substr(0, outputFilenameBase.find_last_of('.')) + "_CompNB.pgm";
+    string nomFichierSortieCompPPM = outputFilenameBase.substr(0, outputFilenameBase.find_last_of('.')) + "_CompPPM.ppm";
+    string nomFichierSortieCompOUT = outputFilenameBase.substr(0, outputFilenameBase.find_last_of('.')) + "_CompOUT.ppm";
+
+    Image imgCompresseNB = Image(nomFichierSortieCompNB, Image::PGM);
+    Image imgCompressePPM = Image(nomFichierSortieCompPPM, Image::PPM);
+    Image imgCompresseOUT = Image(nomFichierSortieCompOUT, Image::PPM);
+
+    imgCompresseOUT.width = width;
+    imgCompresseOUT.height = height;
+    imgCompresseOUT.size = size;
+    imgCompresseOUT.data = createData();
+
+    imgCompressePPM.width = width;
+    imgCompressePPM.height = height;
+    imgCompressePPM.size = size;
+    imgCompressePPM.data = createData();
+
+    imgCompresseNB.width = width;
+    imgCompresseNB.height = height;
+    imgCompresseNB.size = imgSuperPixel.getSize();
+    imgCompresseNB.data = createData();
 
     int iteration = 1;
 
@@ -1021,58 +1040,35 @@ void Image::compressionPallette(Image &imgSuperPixel, const string &outputFilena
     cout << "Fin Convergence" << endl;    
 
     cout << "Début Kmean" << endl;
-    kmean(imgSuperPixel.getData(), dataImgOUT, centroids);
+    kmean(imgSuperPixel.data, imgCompresseOUT.data, centroids);
     cout << "Fin Kmean" << endl;
 
     for (int index = 0; index < size; index+=3) {
         vector<int> pixel = {
-            dataImgOUT[index],
-            dataImgOUT[index + 1],
-            dataImgOUT[index + 2]
+            imgCompresseOUT.data[index],
+            imgCompresseOUT.data[index + 1],
+            imgCompresseOUT.data[index + 2]
         };
 
         for (int i = 0; i < centroids.size(); i++) {
             if (pixel[0]==centroids[i][0]&&pixel[1]==centroids[i][1]&&pixel[2]==centroids[i][2]){
-				dataImgCompNB[index/3]=i;
+				imgCompresseNB.data[index/3]=i;
 			}
         }
     }
 
     for (int i = 0; i < size; i+=3) {
-        int index = dataImgCompNB[i/3];
-        dataImgCompCouleur[i] = centroids[index][0];
-        dataImgCompCouleur[i+1] = centroids[index][1];
-        dataImgCompCouleur[i+2] = centroids[index][2];
+        int index = imgCompresseNB.data[i/3];
+        imgCompressePPM.data[i] = centroids[index][0];
+        imgCompressePPM.data[i+1] = centroids[index][1];
+        imgCompressePPM.data[i+2] = centroids[index][2];
     }
-
-    string nomFichierSortieCompNB = outputFilenameBase.substr(0, outputFilenameBase.find_last_of('.')) + "_CompNB.pgm";
-    string nomFichierSortieCompPPM = outputFilenameBase.substr(0, outputFilenameBase.find_last_of('.')) + "_CompPPM.ppm";
-    string nomFichierSortieCompOUT = outputFilenameBase.substr(0, outputFilenameBase.find_last_of('.')) + "_CompOUT.ppm";
-
-    Image imgCompresseNB = Image(nomFichierSortieCompNB, Image::PGM);
-    Image imgCompressePPM = Image(nomFichierSortieCompPPM, Image::PPM);
-    Image imgCompresseOUT = Image(nomFichierSortieCompOUT, Image::PPM);
-
-    imgCompresseOUT.width = width;
-    imgCompresseOUT.height = height;
-    imgCompresseOUT.size = size;
-    imgCompresseOUT.data = copyData(dataImgOUT, size);
-
-    imgCompressePPM.width = width;
-    imgCompressePPM.height = height;
-    imgCompressePPM.size = size;
-    imgCompressePPM.data = copyData(dataImgCompCouleur, size);
-
-    imgCompresseNB.width = width;
-    imgCompresseNB.height = height;
-    imgCompresseNB.size = imgSuperPixel.getSize();
-    imgCompresseNB.data = copyData(dataImgCompNB, imgSuperPixel.getSize());
 
     imgCompresseNB.write(nomFichierSortieCompNB);
     imgCompressePPM.write(nomFichierSortieCompPPM);
     imgCompresseOUT.write(nomFichierSortieCompOUT);
 
-    for (int i = 0; i < size/3; i++) {
-        cout << "Pixel " << i << "=" << dataImgCompNB[i] << endl;
-    }
+    double PSNR = imgSuperPixel.PSNR(imgCompresseOUT);
+    cout << "PSNR = " << PSNR << endl;
+
 }
