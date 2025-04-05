@@ -714,42 +714,46 @@ void Image::highlightContours(const vector<int> &labels) {
  * @param maxM
  * @param N
  */
-void Image::genererCourbePSNR(Image &imgLAB, Image &imgDeBase, int K, int minM, int maxM, int N) {
+void Image::genererCourbePSNR(Image &imgLAB, Image &imgDeBase, int minK, int maxK, int minM, int maxM, int N) {
     double PSNR = 0.;
     bool contour = false;
-    string curbName = "./CourbePSNR" + std::to_string(K) + ".dat";
+    string curbName = "./CourbePSNRfrom" + std::to_string(minK) + "To"  + std::to_string(maxK) + ".dat";
     ofstream dataFile(curbName);
     if (!dataFile.is_open()) {
         cerr << "Erreur lors de l'ouverture du fichier de données pour la courbe de distortion." << endl;
         return;
     }
-    for (int m = minM; m <= maxM; m += 10) {
-        //dataFile << m ;
-        cout << "m=" << m << endl;
-        Image imgSLICC = imgDeBase.RGBtoLAB();
-        imgSLICC.SLICC(K, m, N, contour);
-        Image imgComp = imgSLICC.LABtoRGB();
-        PSNR = imgDeBase.PSNR(imgComp);
-        cout << "PSNR=" << PSNR << endl;
-        dataFile << m << ' ' << PSNR << ' ' << endl;
+    for (int k = minK; k <= maxK; k += 100) {
+        cout << "K=" << k << endl;
+        dataFile << k << ' ' ;
+        for (int m = minM; m <= maxM; m += 10) {
+            cout << "M=" << m << endl;
+            Image imgSLICC = imgDeBase.RGBtoLAB();
+            imgSLICC.SLICC(k, m, N, contour);
+            Image imgComp = imgSLICC.LABtoRGB();
+            PSNR = imgDeBase.PSNR(imgComp);
+            cout << "PSNR=" << PSNR << endl;
+            dataFile << PSNR << ' ';
     }
+    dataFile << endl;
+}
 
-    ofstream gnuplotScript("./CourbePSNR" + std::to_string(K) + ".plt");
+    ofstream gnuplotScript("./CourbePSNRfrom" + std::to_string(minK) + "To"  + std::to_string(maxK) + ".plt");
     if (!gnuplotScript.is_open()) {
         cerr << "Erreur lors de l'ouverture du fichier de script GNUPLOT." << endl;
         return;
     }
     gnuplotScript << "set terminal png size 800,600\n";
     gnuplotScript << "set output '" << "CourbePSNR" << ".png'\n";
-    gnuplotScript << "set title 'PSNR en fonction de K et N'\n";
+    gnuplotScript << "set title 'PSNR en fonction de K et M'\n";
     gnuplotScript << "set xlabel 'M'\n";
+    gnuplotScript << "set xrange [" << minK << ":*]\n";
     gnuplotScript << "set ylabel 'PSNR (dB)'\n";
-    gnuplotScript << "plot '" << curbName << "' with lines title 'PSNR en Fonction pour k=" << std::to_string(K)
-                  << "'\n";
+    gnuplotScript << "plot '" << curbName << "' using 1:2 title 'm=10' with lines lc rgb 'red', '' using 1:3 title 'm=20' with lines lc rgb 'green', '' using 1:4 title 'm=30' with lines lc rgb 'blue', '' using 1:5 title 'm=40' with lines lc rgb 'orange', '' using 1:6 title 'm=50' with lines lc rgb 'purple'\n";
 
     gnuplotScript.close();
 
-    system(("gnuplot ./CourbePSNR" + std::to_string(K) + ".plt").c_str());
+    system(("gnuplot ./CourbePSNRfrom" + std::to_string(minK) + "To"  + std::to_string(maxK) + ".plt").c_str());
 }
 
 

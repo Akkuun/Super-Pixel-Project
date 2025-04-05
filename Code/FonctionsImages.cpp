@@ -28,8 +28,8 @@ void SLICC(int argc, char *argv[]) {
     if (genererSLICC) {
         Image imgLAB = img.RGBtoLAB();
         imgLAB.write(nomFichierEntree);
-        int k = 1000 ; // Nombre de clusters
-        int m = 15; //résolution spatiale
+        int k = 100 ; // Nombre de clusters
+        int m = 20; //résolution spatiale
         int N = img.getSize();
         imgLAB.SLICC(k, m, N, contourSLICC);
         Image imgOUT = imgLAB.LABtoRGB();
@@ -40,13 +40,7 @@ void SLICC(int argc, char *argv[]) {
                 to_string(m) + ".ppm";
         imgOUT.write(nomFichierSortieSLICC);
 
-        // string nomFichierSortieCompNB = nomFichierSortieSLICC.substr(0, nomFichierSortieSLICC.find_last_of('.')) + "_CompNB.pgm";
-        // string nomFichierSortieCompPPM = nomFichierSortieSLICC.substr(0, nomFichierSortieSLICC.find_last_of('.')) + "_CompPPM.ppm";
-        // Image imgCompresseNB = Image(nomFichierSortieCompNB, Image::PGM);
-        // Image imgCompressePPM = Image(nomFichierSortieCompPPM, Image::PPM);
-        // img.compressionPallette(imgOUT, imgCompressePPM, imgCompresseNB);
-        // imgCompresseNB.write(nomFichierSortieCompNB);
-        // imgCompressePPM.write(nomFichierSortieCompPPM);
+        img.genererCourbePSNR(imgLAB, img, 100, 2000, 10, 50, N);
 
         if (compressSLICC) {
             Image imgOUTLAB = imgOUT.RGBtoLAB();

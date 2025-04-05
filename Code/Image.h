@@ -60,7 +60,7 @@ public:
     void highlightContoursPoints(const vector<Point> &points);
     Image MeanShiftSegmentation(float spatial_radius, float color_radius, int max_iterations, bool contour);
     int calculer_norme_gradian(int i, int j, Image &imgGRIS);
-    void genererCourbePSNR(Image &imgLAB, Image &imgDeBase, int K, int minM, int maxM, int N);
+    void genererCourbePSNR(Image &imgLAB, Image &imgDeBase, int minK, int maxK, int minM, int maxM, int N);
     void compressionPallette(Image &imgSuperPixel, const string &outputFilenameBase);
     void kmean(OCTET* ImgIn, OCTET* ImgOUT, vector<vector<int>> centroids);
 
