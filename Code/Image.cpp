@@ -955,11 +955,6 @@ void Image::compressionPallette(Image &imgSuperPixel, const string &outputFilena
     imgCompresseOUT.size = size;
     imgCompresseOUT.data = createData();
 
-    imgCompressePPM.width = width;
-    imgCompressePPM.height = height;
-    imgCompressePPM.size = size;
-    imgCompressePPM.data = createData();
-
     imgCompresseNB.width = width;
     imgCompresseNB.height = height;
     imgCompresseNB.size = imgSuperPixel.getSize();
@@ -1057,15 +1052,7 @@ void Image::compressionPallette(Image &imgSuperPixel, const string &outputFilena
         }
     }
 
-    for (int i = 0; i < size; i+=3) {
-        int index = imgCompresseNB.data[i/3];
-        imgCompressePPM.data[i] = centroids[index][0];
-        imgCompressePPM.data[i+1] = centroids[index][1];
-        imgCompressePPM.data[i+2] = centroids[index][2];
-    }
-
     imgCompresseNB.write(nomFichierSortieCompNB);
-    imgCompressePPM.write(nomFichierSortieCompPPM);
     imgCompresseOUT.write(nomFichierSortieCompOUT);
 
     double PSNR = imgSuperPixel.PSNR(imgCompresseOUT);
