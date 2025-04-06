@@ -21,6 +21,7 @@ bool contourSLICC = false;
 bool compressSLICC = false;
 bool genererMeanShift = false;
 bool contourMeanShift = false;
+bool compressMeanShift = false;
 int k = 700;
 int m = 55;
 float spatial_radius = 10.0f;
@@ -31,7 +32,8 @@ Fl_Box* image_box;
 Fl_RGB_Image* displayed_image = nullptr; // Global variable to store the image
 Fl_Check_Button* contour_slicc_button = nullptr;
 Fl_Check_Button* compress_slicc_button = nullptr;
-
+Fl_Check_Button* contour_mean_shift_button = nullptr;
+Fl_Check_Button* compress_mean_shift_button = nullptr;
 
 void update_process_button() {
     bool slicc_ready = genererSLICC && !selected_file.empty();
@@ -58,8 +60,6 @@ Fl_RGB_Image* loadPPM(const char* filename) {
         cerr << "Format non supporté : " << format << endl;
         return nullptr;
     }
-
-
 
     file >> width >> height >> maxVal;
     file.ignore(); // Sauter le caractère de nouvelle ligne
@@ -104,8 +104,6 @@ void process_image(Fl_Widget* w, void* data) {
         int N = img.getSize();
         //si les paramètres k et m sont vides, on gardes les valeur par défaut, sinon on prendre les valeurs des champs
 
-
-
         imgLAB.SLICC(k, m, N, contourSLICC);
         Image imgOUT = imgLAB.LABtoRGB();
         string nomFichierSortieSLICC = selected_file.substr(0, selected_file.find_last_of('.')) + "_SLICC_" + to_string(k) + "_" + to_string(m) + ".ppm";
@@ -133,6 +131,11 @@ void process_image(Fl_Widget* w, void* data) {
         Image resultImg = segmentedImg.LABtoRGB();
         string nomFichierSortieMean = selected_file.substr(0, selected_file.find_last_of('.')) + "_MeanShift.ppm";
         resultImg.write(nomFichierSortieMean);
+
+        if(compressMeanShift) {
+            Image imgOUTLAB = resultImg.RGBtoLAB();
+            imgOUTLAB.compressionPallette(resultImg, nomFichierSortieMean);
+        }
 
         if (displayed_image) {
             delete displayed_image; // Delete the previous image to avoid memory leak
@@ -171,8 +174,12 @@ void toggle_genererMeanShift(Fl_Widget* w, void* data) {
     for (int i = 0; i < 2; ++i) {
         if (genererMeanShift) {
             inputs[i]->activate();
+            contour_mean_shift_button->activate();
+            compress_mean_shift_button->activate();
         } else {
             inputs[i]->deactivate();
+            contour_mean_shift_button->deactivate();
+            compress_mean_shift_button->deactivate();
         }
     }
     update_process_button();
@@ -194,15 +201,15 @@ int main(int argc, char** argv) {
     m_input->deactivate();
 
     Fl_Check_Button* mean_shift_button = new Fl_Check_Button(10, 170, 150, 30, "Generate Mean Shift");
-    Fl_Check_Button* contour_mean_shift_button = new Fl_Check_Button(10, 210, 150, 30, "Contour Mean Shift");
-
+    contour_mean_shift_button = new Fl_Check_Button(10, 210, 150, 30, "Contour Mean Shift");
+    compress_mean_shift_button = new Fl_Check_Button(10, 250, 165, 30, "Compress Mean Shift");
     Fl_Input* spatial_input = new Fl_Int_Input(300, 170, 100, 30, "Spatial Radius:");
     spatial_input->deactivate();
     Fl_Input* color_input = new Fl_Int_Input(300, 210, 100, 30, "Color Radius:");
     color_input->deactivate();
 
-    process_button = new Fl_Button(10, 250, 100, 30, "Process Image");
-    Fl_Progress* progress = new Fl_Progress(120, 250, 470, 30);
+    process_button = new Fl_Button(10, 290, 100, 30, "Process Image");
+    Fl_Progress* progress = new Fl_Progress(120, 290, 470, 30);
     progress->minimum(0);
     progress->maximum(100);
 
@@ -217,6 +224,7 @@ int main(int argc, char** argv) {
     compress_slicc_button->deactivate();
     mean_shift_button->callback(toggle_genererMeanShift, mean_shift_inputs);
     contour_mean_shift_button->deactivate();
+    compress_mean_shift_button->deactivate();
     process_button->callback(process_image, progress);
     process_button->deactivate();
 
@@ -241,6 +249,12 @@ int main(int argc, char** argv) {
         compressSLICC = ((Fl_Check_Button*)w)->value();
     });
 
+    contour_mean_shift_button->callback([](Fl_Widget* w, void* data) {
+        contourMeanShift = ((Fl_Check_Button*)w)->value();
+    });
+    compress_mean_shift_button->callback([](Fl_Widget* w, void* data) {
+        compressMeanShift = ((Fl_Check_Button*)w)->value();
+    });
     window->end();
     window->show(argc, argv);
     return Fl::run();

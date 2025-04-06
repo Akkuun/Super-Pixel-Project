@@ -946,9 +946,9 @@ void Image::compressionPallette(Image &imgSuperPixel, const string &outputFilena
     vector<vector<vector<int>>> clusters;
     vector<vector<int>> centroids;
 
-    string nomFichierSortieCompNB = outputFilenameBase.substr(0, outputFilenameBase.find_last_of('.')) + "_CompNB.pgm";
-    string nomFichierSortieCompPPM = outputFilenameBase.substr(0, outputFilenameBase.find_last_of('.')) + "_CompPPM.ppm";
-    string nomFichierSortieCompOUT = outputFilenameBase.substr(0, outputFilenameBase.find_last_of('.')) + "_CompOUT.ppm";
+    string nomFichierSortieCompNB = outputFilenameBase.substr(0, outputFilenameBase.find_last_of('.')) + "_CompressionPalettePGM.pgm";
+    string nomFichierSortieCompPPM = outputFilenameBase.substr(0, outputFilenameBase.find_last_of('.')) + "_CompressionPalettePPM.ppm";
+    string nomFichierSortieCompOUT = outputFilenameBase.substr(0, outputFilenameBase.find_last_of('.')) + "_CompressionPalette.ppm";
 
     Image imgCompresseNB = Image(nomFichierSortieCompNB, Image::PGM);
     Image imgCompressePPM = Image(nomFichierSortieCompPPM, Image::PPM);
