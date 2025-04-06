@@ -29,6 +29,9 @@ int max_iterations = 100;
 Fl_Button* process_button;
 Fl_Box* image_box;
 Fl_RGB_Image* displayed_image = nullptr; // Global variable to store the image
+Fl_Check_Button* contour_slicc_button = nullptr;
+Fl_Check_Button* compress_slicc_button = nullptr;
+
 
 void update_process_button() {
     bool slicc_ready = genererSLICC && !selected_file.empty();
@@ -150,8 +153,12 @@ void toggle_genererSLICC(Fl_Widget* w, void* data) {
     for (int i = 0; i < 2; ++i) {
         if (genererSLICC) {
             inputs[i]->activate();
+            contour_slicc_button->activate();
+            compress_slicc_button->activate();
         } else {
             inputs[i]->deactivate();
+            contour_slicc_button->deactivate();
+            compress_slicc_button->deactivate();
         }
     }
     update_process_button();
@@ -177,9 +184,8 @@ int main(int argc, char** argv) {
     Fl_Box* file_box = new Fl_Box(120, 10, 470, 30, "No file chosen");
 
     Fl_Check_Button* slicc_button = new Fl_Check_Button(10, 50, 150, 30, "Generate SLICC");
-    Fl_Check_Button* contour_slicc_button = new Fl_Check_Button(10, 90, 150, 30, "Contour SLICC");
-    Fl_Check_Button* compress_slicc_button = new Fl_Check_Button(10, 130, 150, 30, "Compress SLICC");
-
+    contour_slicc_button= new Fl_Check_Button(10, 90, 150, 30, "Contour SLICC");
+    compress_slicc_button = new Fl_Check_Button(10, 130, 150, 30, "Compress SLICC");
     Fl_Input* k_input = new Fl_Int_Input(300, 50, 100, 30, "k:");
 
     k_input->deactivate();
