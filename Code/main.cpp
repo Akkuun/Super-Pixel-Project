@@ -28,6 +28,8 @@ float spatial_radius = 10.0f;
 float color_radius = 10.0f;
 int max_iterations = 100;
 Fl_Button* process_button;
+
+vector<Fl_Box*> listeDesaImagesAfficher;
 Fl_Box* image_box;
 Fl_RGB_Image* displayed_image = nullptr; // Global variable to store the image
 Fl_Check_Button* contour_slicc_button = nullptr;
@@ -44,6 +46,31 @@ void update_process_button() {
         process_button->deactivate();
     }
 }
+
+
+Fl_RGB_Image* resize_image(Fl_RGB_Image* img, int new_width, int new_height) {
+    if (!img) return nullptr;
+
+    int old_width = img->w();
+    int old_height = img->h();
+    int depth = img->d();
+    // old_data
+    unsigned char* old_data = (unsigned char *) img->data();
+    std::vector<unsigned char> new_data(new_width * new_height * depth);
+
+    for (int y = 0; y < new_height; ++y) {
+        for (int x = 0; x < new_width; ++x) {
+            int old_x = x * old_width / new_width;
+            int old_y = y * old_height / new_height;
+            for (int d = 0; d < depth; ++d) {
+                new_data[(y * new_width + x) * depth + d] = old_data[(old_y * old_width + old_x) * depth + d];
+            }
+        }
+    }
+
+    return new Fl_RGB_Image(new_data.data(), new_width, new_height, depth);
+}
+
 
 Fl_RGB_Image* loadPPM(const char* filename) {
     ifstream file(filename, ios::binary);
@@ -98,12 +125,17 @@ void process_image(Fl_Widget* w, void* data) {
     Image img(selected_file, Image::PPM);
     img.read();
 
+    // Clear previous images
+    for (auto box : listeDesaImagesAfficher) {
+        delete box->image();
+        delete box;
+    }
+    listeDesaImagesAfficher.clear();
+
     if (genererSLICC) {
         Image imgLAB = img.RGBtoLAB();
         imgLAB.write(selected_file);
         int N = img.getSize();
-        //si les paramètres k et m sont vides, on gardes les valeur par défaut, sinon on prendre les valeurs des champs
-
         imgLAB.SLICC(k, m, N, contourSLICC);
         Image imgOUT = imgLAB.LABtoRGB();
         string nomFichierSortieSLICC = selected_file.substr(0, selected_file.find_last_of('.')) + "_SLICC_" + to_string(k) + "_" + to_string(m) + ".ppm";
@@ -111,17 +143,16 @@ void process_image(Fl_Widget* w, void* data) {
 
         if (compressSLICC) {
             Image imgOUTLAB = imgOUT.RGBtoLAB();
-            //img.genererCourbePSNR(imgLAB, img, k, 10, 50, N);
             imgOUT.compressionPallette(imgOUT, nomFichierSortieSLICC);
         }
 
-        if (displayed_image) {
-            delete displayed_image; // Delete the previous image to avoid memory leak
-        }
-        displayed_image = loadPPM(nomFichierSortieSLICC.c_str());
-        if (displayed_image) {
-            image_box->image(displayed_image);
-            image_box->redraw();
+        Fl_RGB_Image* img_to_display = loadPPM(nomFichierSortieSLICC.c_str());
+        if (img_to_display) {
+            Fl_RGB_Image* resized_img = resize_image(img_to_display, 200, 200); // Resize to 200x200
+            Fl_Box* img_box = new Fl_Box(10, 300 + listeDesaImagesAfficher.size() * 210, 200, 200);
+            img_box->image(resized_img);
+            img_box->redraw();
+            listeDesaImagesAfficher.push_back(img_box);
         }
     }
 
@@ -132,18 +163,18 @@ void process_image(Fl_Widget* w, void* data) {
         string nomFichierSortieMean = selected_file.substr(0, selected_file.find_last_of('.')) + "_MeanShift.ppm";
         resultImg.write(nomFichierSortieMean);
 
-        if(compressMeanShift) {
+        if (compressMeanShift) {
             Image imgOUTLAB = resultImg.RGBtoLAB();
             imgOUTLAB.compressionPallette(resultImg, nomFichierSortieMean);
         }
 
-        if (displayed_image) {
-            delete displayed_image; // Delete the previous image to avoid memory leak
-        }
-        displayed_image = loadPPM(nomFichierSortieMean.c_str());
-        if (displayed_image) {
-            image_box->image(displayed_image);
-            image_box->redraw();
+        Fl_RGB_Image* img_to_display = loadPPM(nomFichierSortieMean.c_str());
+        if (img_to_display) {
+            Fl_RGB_Image* resized_img = resize_image(img_to_display, 200, 200); // Resize to 200x200
+            Fl_Box* img_box = new Fl_Box(10, 300 + listeDesaImagesAfficher.size() * 210, 200, 200);
+            img_box->image(resized_img);
+            img_box->redraw();
+            listeDesaImagesAfficher.push_back(img_box);
         }
     }
 
