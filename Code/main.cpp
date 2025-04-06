@@ -113,7 +113,8 @@ void process_image(Fl_Widget* w, void* data) {
 
         if (compressSLICC) {
             Image imgOUTLAB = imgOUT.RGBtoLAB();
-            img.genererCourbePSNR(imgLAB, img, k, 10, 50, N);
+            //img.genererCourbePSNR(imgLAB, img, k, 10, 50, N);
+            imgOUT.compressionPallette(imgOUT, nomFichierSortieSLICC);
         }
 
         if (displayed_image) {
@@ -231,6 +232,13 @@ int main(int argc, char** argv) {
     });
     color_input->callback([](Fl_Widget* w, void* data) {
         color_radius = atof(((Fl_Input*)w)->value());
+    });
+
+    contour_slicc_button->callback([](Fl_Widget* w, void* data) {
+        contourSLICC = ((Fl_Check_Button*)w)->value();
+    });
+    compress_slicc_button->callback([](Fl_Widget* w, void* data) {
+        compressSLICC = ((Fl_Check_Button*)w)->value();
     });
 
     window->end();
