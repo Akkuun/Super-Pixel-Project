@@ -642,7 +642,7 @@ CMAKE_UNAME:INTERNAL=/usr/bin/uname
 //ADVANCED property for variable: CMAKE_VERBOSE_MAKEFILE
 CMAKE_VERBOSE_MAKEFILE-ADVANCED:INTERNAL=1
 //Details about finding FLTK
-FIND_PACKAGE_MESSAGE_DETAILS_FLTK:INTERNAL=[fltk_images;fltk_forms;fltk_gl;/usr/lib/x86_64-linux-gnu/libGL.so;fltk][/usr/lib/fltk;/usr/include][fluid][v()]
+FIND_PACKAGE_MESSAGE_DETAILS_FLTK:INTERNAL=[fltk_images;fltk_forms;fltk_gl;fltk][/usr/lib/fltk;/usr/include][fluid][v()]
 //Details about finding OpenGL
 FIND_PACKAGE_MESSAGE_DETAILS_OpenGL:INTERNAL=[/usr/lib/x86_64-linux-gnu/libOpenGL.so][/usr/lib/x86_64-linux-gnu/libGLX.so][/usr/include][c ][v()]
 //Details about finding X11
