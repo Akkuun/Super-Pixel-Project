@@ -439,7 +439,7 @@ int Image::affecterSuperPixelVoisin(int x, int y, vector<int> &newLabels, vector
     return bestLabel;
 }
 
-void Image::SLICC(int &k, int &m, int &N, bool &contour) {
+void Image::SLICC(int &k, int &m, int &N, bool &contour, string filename) {
     // PHASE 1 : Initialisation
     float S = sqrt(static_cast<float>(N) / k);
     cout << "Initialisation des centres de clusters" << endl;
@@ -523,7 +523,7 @@ void Image::SLICC(int &k, int &m, int &N, bool &contour) {
         }
     }
     if (contour) {
-        this->highlightContours(labels);
+        this->highlightContours(labels, filename);
     }
 
     cout << "Fin SLICC" << endl;
@@ -536,15 +536,24 @@ void Image::SLICC(int &k, int &m, int &N, bool &contour) {
  * \param Image2 : Image d'origine avec traitements appliqués
  * \return Le PSNR entre les 2 images
  */
+// float Image::PSNR(Image &imageTraitee) {
+//     float mse = 0.0f;
+//     for (int i = 0; i < imageTraitee.height; i++) {
+//         for (int j = 0; j < imageTraitee.width; j++) {
+//             int index = getIndice(i, j, imageTraitee.height, imageTraitee.width);
+//             mse += (this->data[index] - imageTraitee.data[index]) * (this->data[index] - imageTraitee.data[index]);
+//         }
+//     }
+//     mse /= (imageTraitee.width * imageTraitee.height);
+//     return 10 * log10(255 * 255 / mse);
+// }
+
 float Image::PSNR(Image &imageTraitee) {
     float mse = 0.0f;
-    for (int i = 0; i < imageTraitee.height; i++) {
-        for (int j = 0; j < imageTraitee.width; j++) {
-            int index = getIndice(i, j, imageTraitee.height, imageTraitee.width);
-            mse += (this->data[index] - imageTraitee.data[index]) * (this->data[index] - imageTraitee.data[index]);
-        }
+    for (int i = 0; i < imageTraitee.size; i++) {
+            mse += (this->data[i] - imageTraitee.data[i]) * (this->data[i] - imageTraitee.data[i]);
     }
-    mse /= (imageTraitee.width * imageTraitee.height);
+    mse /= imageTraitee.size;
     return 10 * log10(255 * 255 / mse);
 }
 
@@ -656,7 +665,7 @@ void Image::genererCourbeDistortion(Image &imgSLICC, const string &outputFilenam
  * \brief Met en évidence les contours des superpixels dans l'image.
  * @param labels Liste des labels des pixels.
  */
-void Image::highlightContours(const vector<int> &labels) {
+void Image::highlightContours(const vector<int> &labels, string filenameDeBase) {
     cout << "debut highligth des contours" << endl;
     // 5.2 Mettre en évidence les contours des superpixels
     // 5.2.1 Initialiser les valeurs des contours
@@ -679,7 +688,7 @@ void Image::highlightContours(const vector<int> &labels) {
             }
         }
     }
-    Image imgHighligthContours(filename, PPM);
+    Image imgHighligthContours(filenameDeBase, PPM);
     imgHighligthContours.width = width;
     imgHighligthContours.height = height;
     imgHighligthContours.size = size;
@@ -701,7 +710,7 @@ void Image::highlightContours(const vector<int> &labels) {
             }
         }
     }
-    ecrire_image_ppm(const_cast<char *>((filename.substr(0, filename.find_last_of('.')) + "_contours.ppm").c_str()),
+    ecrire_image_ppm(const_cast<char *>((filenameDeBase.substr(0, filenameDeBase.find_last_of('.')) + "_contours.ppm").c_str()),
                      imgHighligthContours.data, height, width);
     cout << "fin highligth des contours" << endl;
 }
@@ -729,7 +738,7 @@ void Image::genererCourbePSNR(Image &imgLAB, Image &imgDeBase, int minK, int max
         for (int m = minM; m <= maxM; m += 10) {
             cout << "M=" << m << endl;
             Image imgSLICC = imgDeBase.RGBtoLAB();
-            imgSLICC.SLICC(k, m, N, contour);
+            imgSLICC.SLICC(k, m, N, contour, imgDeBase.filename);
             Image imgComp = imgSLICC.LABtoRGB();
             PSNR = imgDeBase.PSNR(imgComp);
             cout << "PSNR=" << PSNR << endl;
@@ -746,7 +755,7 @@ void Image::genererCourbePSNR(Image &imgLAB, Image &imgDeBase, int minK, int max
     gnuplotScript << "set terminal png size 800,600\n";
     gnuplotScript << "set output '" << "CourbePSNR" << ".png'\n";
     gnuplotScript << "set title 'PSNR en fonction de K et M'\n";
-    gnuplotScript << "set xlabel 'M'\n";
+    gnuplotScript << "set xlabel 'K'\n";
     gnuplotScript << "set xrange [" << minK << ":*]\n";
     gnuplotScript << "set ylabel 'PSNR (dB)'\n";
     gnuplotScript << "plot '" << curbName << "' using 1:2 title 'm=10' with lines lc rgb 'red', '' using 1:3 title 'm=20' with lines lc rgb 'green', '' using 1:4 title 'm=30' with lines lc rgb 'blue', '' using 1:5 title 'm=40' with lines lc rgb 'orange', '' using 1:6 title 'm=50' with lines lc rgb 'purple'\n";
@@ -764,7 +773,7 @@ void Image::genererCourbePSNR(Image &imgLAB, Image &imgDeBase, int minK, int max
  * @param max_iterations  : Nombre maximum d'itérations pour la convergence.
  * @return L'image segmentée en format LAB
  */
-Image Image::MeanShiftSegmentation(float spatial_radius, float color_radius, int max_iterations, bool contour) {
+Image Image::MeanShiftSegmentation(float spatial_radius, float color_radius, int max_iterations, bool contour, string filenane) {
     cout << "Début de la segmentation par Mean Shift" << endl;
     vector <Point> points(height * width);
     for (int i = 0; i < height; ++i) {
@@ -848,7 +857,7 @@ Image Image::MeanShiftSegmentation(float spatial_radius, float color_radius, int
     }
 
     if (contour) {
-        this->highlightContoursPoints(shifted_points);
+        this->highlightContoursPoints(shifted_points,filenane);
     }
 
     return result;
@@ -858,7 +867,7 @@ Image Image::MeanShiftSegmentation(float spatial_radius, float color_radius, int
  * \brief Met en évidence les contours des superpixels dans l'image.
  * @param points Liste des points des pixels.
  */
-void Image::highlightContoursPoints(const vector <Point> &points) {
+void Image::highlightContoursPoints(const vector <Point> &points, string filenameDeBase) {
 
     cout << "debut highligth des contours" << endl;
     vector<int> contours(size / 3, 0);
@@ -882,7 +891,7 @@ void Image::highlightContoursPoints(const vector <Point> &points) {
             }
         }
     }
-    Image imgHighligthContours(filename, PPM);
+    Image imgHighligthContours(filenameDeBase, PPM);
     imgHighligthContours.width = width;
     imgHighligthContours.height = height;
     imgHighligthContours.size = size;
@@ -904,7 +913,7 @@ void Image::highlightContoursPoints(const vector <Point> &points) {
             }
         }
     }
-    ecrire_image_ppm(const_cast<char *>((filename.substr(0, filename.find_last_of('.')) + "_contours.ppm").c_str()),
+    ecrire_image_ppm(const_cast<char *>((filenameDeBase.substr(0, filenameDeBase.find_last_of('.')) + "_contours.ppm").c_str()),
                      imgHighligthContours.data, height, width);
 }
 
@@ -1059,7 +1068,11 @@ void Image::compressionPallette(Image &imgSuperPixel, const string &outputFilena
     imgCompresseNB.write(nomFichierSortieCompNB);
     imgCompresseOUT.write(nomFichierSortieCompOUT);
 
+    double PSNR3 = this->PSNR(imgSuperPixel);
+    cout << "PSNR entre image d'origine et image super pixels = " << PSNR3 << endl;
     double PSNR = imgSuperPixel.PSNR(imgCompresseOUT);
-    cout << "PSNR = " << PSNR << endl;
+    cout << "PSNR entre image super pixels et image compréssée = " << PSNR << endl;
+    double PSNR2 = this->PSNR(imgCompresseOUT);
+    cout << "PSNR entre image d'origine et image compréssée= " << PSNR2 << endl;
 
 }

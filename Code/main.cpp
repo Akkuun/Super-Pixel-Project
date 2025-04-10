@@ -13,6 +13,9 @@
 #include <FL/Fl_Int_Input.H>
 #include "Image.h"
 
+#include <iomanip>
+#include <sstream>
+
 using namespace std;
 
 string selected_file;
@@ -36,6 +39,12 @@ Fl_Check_Button* contour_slicc_button = nullptr;
 Fl_Check_Button* compress_slicc_button = nullptr;
 Fl_Check_Button* contour_mean_shift_button = nullptr;
 Fl_Check_Button* compress_mean_shift_button = nullptr;
+
+std::string floatToString(double value, int precision) {
+    std::ostringstream out;
+    out << std::fixed << std::setprecision(precision) << value;
+    return out.str();
+}
 
 void update_process_button() {
     bool slicc_ready = genererSLICC && !selected_file.empty();
@@ -134,16 +143,17 @@ void process_image(Fl_Widget* w, void* data) {
 
     if (genererSLICC) {
         Image imgLAB = img.RGBtoLAB();
-        imgLAB.write(selected_file);
+        //imgLAB.write(selected_file);
         int N = img.getSize();
-        imgLAB.SLICC(k, m, N, contourSLICC);
-        Image imgOUT = imgLAB.LABtoRGB();
         string nomFichierSortieSLICC = selected_file.substr(0, selected_file.find_last_of('.')) + "_SLICC_" + to_string(k) + "_" + to_string(m) + ".ppm";
+        imgLAB.SLICC(k, m, N, contourSLICC, nomFichierSortieSLICC);
+        Image imgOUT = imgLAB.LABtoRGB();
         imgOUT.write(nomFichierSortieSLICC);
+        //img.genererCourbePSNR(imgLAB, img, 100, 2000, 10, 50, N);
 
         if (compressSLICC) {
             Image imgOUTLAB = imgOUT.RGBtoLAB();
-            imgOUT.compressionPallette(imgOUT, nomFichierSortieSLICC);
+            img.compressionPallette(imgOUT, nomFichierSortieSLICC);
         }
 
         Fl_RGB_Image* img_to_display = loadPPM(nomFichierSortieSLICC.c_str());
@@ -158,14 +168,14 @@ void process_image(Fl_Widget* w, void* data) {
 
     if (genererMeanShift) {
         Image imgLAB = img.RGBtoLAB();
-        Image segmentedImg = imgLAB.MeanShiftSegmentation(spatial_radius, color_radius, max_iterations, contourMeanShift);
+        string nomFichierSortieMean = selected_file.substr(0, selected_file.find_last_of('.')) + "_MeanShift_" + floatToString(color_radius,2) + "_" + floatToString(spatial_radius,2) + ".ppm";
+        Image segmentedImg = imgLAB.MeanShiftSegmentation(spatial_radius, color_radius, max_iterations, contourMeanShift, nomFichierSortieMean);
         Image resultImg = segmentedImg.LABtoRGB();
-        string nomFichierSortieMean = selected_file.substr(0, selected_file.find_last_of('.')) + "_MeanShift.ppm";
         resultImg.write(nomFichierSortieMean);
 
         if (compressMeanShift) {
             Image imgOUTLAB = resultImg.RGBtoLAB();
-            imgOUTLAB.compressionPallette(resultImg, nomFichierSortieMean);
+            img.compressionPallette(resultImg, nomFichierSortieMean);
         }
 
         Fl_RGB_Image* img_to_display = loadPPM(nomFichierSortieMean.c_str());

@@ -31,13 +31,14 @@ void SLICC(int argc, char *argv[]) {
         int k = 100 ; // Nombre de clusters
         int m = 20; //résolution spatiale
         int N = img.getSize();
-        imgLAB.SLICC(k, m, N, contourSLICC);
-        Image imgOUT = imgLAB.LABtoRGB();
-        //écriture de l'image Superpixels
-        //ajoute dans la string SLIC juste avant le . le nombre de clusters et la résolution spatiale
         string nomFichierSortieSLICC =
                 nomFichierEntree.substr(0, nomFichierEntree.find_last_of('.')) + "_SLICC_" + to_string(k) + "_" +
                 to_string(m) + ".ppm";
+        imgLAB.SLICC(k, m, N, contourSLICC,nomFichierSortieSLICC);
+        Image imgOUT = imgLAB.LABtoRGB();
+        //écriture de l'image Superpixels
+        //ajoute dans la string SLIC juste avant le . le nombre de clusters et la résolution spatiale
+        
         imgOUT.write(nomFichierSortieSLICC);
 
         img.genererCourbePSNR(imgLAB, img, 100, 2000, 10, 50, N);
@@ -58,13 +59,14 @@ void SLICC(int argc, char *argv[]) {
         int max_iterations = 100;
 
         Image imgLAB = img.RGBtoLAB();
-        Image segmentedImg = imgLAB.MeanShiftSegmentation(spatial_radius, color_radius, max_iterations,contourMeanShift);
+        string nomFichierSortieMean = nomFichierEntree.substr(0, nomFichierEntree.find_last_of('.')) + "_MeanShift_" + to_string(color_radius) + "_" + to_string(spatial_radius) + ".ppm";
+        
+        Image segmentedImg = imgLAB.MeanShiftSegmentation(spatial_radius, color_radius, max_iterations,contourMeanShift, nomFichierSortieMean);
 
         // Convert the segmented image back to RGB
         Image resultImg = segmentedImg.LABtoRGB();
 
         // Save the segmented image
-        string nomFichierSortieMean = nomFichierEntree.substr(0, nomFichierEntree.find_last_of('.')) + "_MeanShift.ppm";
         resultImg.write(nomFichierSortieMean);
     }
 

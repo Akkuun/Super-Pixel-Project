@@ -1,4 +1,4 @@
-# Install script for directory: /home/mathis/Documents/M1_IMAGINE/SuperPixelProjet/Code
+# Install script for directory: /home/paradox/Bureau/M1S2/compression/Super-Pixel-Project/Code
 
 # Set the install prefix
 if(NOT DEFINED CMAKE_INSTALL_PREFIX)
@@ -50,5 +50,5 @@ endif()
 
 string(REPLACE ";" "\n" CMAKE_INSTALL_MANIFEST_CONTENT
        "${CMAKE_INSTALL_MANIFEST_FILES}")
-file(WRITE "/home/mathis/Documents/M1_IMAGINE/SuperPixelProjet/Code/build/${CMAKE_INSTALL_MANIFEST}"
+file(WRITE "/home/paradox/Bureau/M1S2/compression/Super-Pixel-Project/Code/build/${CMAKE_INSTALL_MANIFEST}"
      "${CMAKE_INSTALL_MANIFEST_CONTENT}")

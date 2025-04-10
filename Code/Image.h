@@ -42,7 +42,7 @@ public:
     float PSNR(Image &imageTraitee);
 
     //fonctions de traitement
-    void SLICC(int &k, int &m, int &N, bool &contour);
+    void SLICC(int &k, int &m, int &N, bool &contour, string filename);
     Image RGBtoLAB();
     Image LABtoRGB();
     float calculerDistanceCouleur(ClusterCenter &cluster, int &i, int &j);
@@ -56,9 +56,9 @@ public:
     Image compressionParQuantification(int nBit);
     float calculerEntropieImage();
     void genererCourbeDistortion(Image &imgSLICC, const string &outputFilenameBase, Image &imgDeBase);
-    void highlightContours(const vector<int> &labels);
-    void highlightContoursPoints(const vector<Point> &points);
-    Image MeanShiftSegmentation(float spatial_radius, float color_radius, int max_iterations, bool contour);
+    void highlightContours(const vector<int> &labels, string filenameDeBase);
+    void highlightContoursPoints(const vector<Point> &points, string filenameDeBase);
+    Image MeanShiftSegmentation(float spatial_radius, float color_radius, int max_iterations, bool contour, string filename);
     int calculer_norme_gradian(int i, int j, Image &imgGRIS);
     void genererCourbePSNR(Image &imgLAB, Image &imgDeBase, int minK, int maxK, int minM, int maxM, int N);
     void compressionPallette(Image &imgSuperPixel, const string &outputFilenameBase);
