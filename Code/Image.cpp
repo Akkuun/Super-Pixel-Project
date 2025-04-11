@@ -785,7 +785,7 @@ Image Image::MeanShiftSegmentation(float spatial_radius, float color_radius, int
     }
 
     vector <Point> shifted_points = points;
-    float convergence_threshold = 1e-3;
+    float convergence_threshold = 1e-1;
     for (int iter = 0; iter < max_iterations; ++iter) {
         cout << "Iteration: " << iter + 1 << endl;
         bool converged = true;
