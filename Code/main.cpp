@@ -2,6 +2,7 @@
 #include <FL/Fl_Window.H>
 #include <FL/Fl_Button.H>
 #include <FL/Fl_File_Chooser.H>
+#include <FL/Fl_Native_File_Chooser.H> // For directory chooser
 #include <FL/Fl_Box.H>
 #include <FL/Fl_Check_Button.H>
 #include <FL/Fl_Progress.H>
@@ -44,6 +45,8 @@ Fl_Check_Button *compress_mean_shift_button = nullptr;
 Fl_Button* save_as_button = nullptr;
 Fl_Choice* format_choice = nullptr;
 std::string selected_format = "JPG"; // Default format
+std::string output_directory = "."; // Default output directory
+
 
 
 void save_as_callback(Fl_Widget* w, void* data) {
@@ -68,6 +71,17 @@ void update_process_button() {
 }
 
 
+void choose_output_directory(Fl_Widget* w, void* data) {
+    Fl_Native_File_Chooser chooser;
+    chooser.type(Fl_Native_File_Chooser::BROWSE_DIRECTORY);
+    chooser.title("Choose Output Directory");
+    if (chooser.show() == 0) {
+        output_directory = chooser.filename();
+        Fl_Box* output_dir_box = (Fl_Box*)data;
+        output_dir_box->label(output_directory.c_str());
+        cout << "Output directory set to: " << output_directory << endl;
+    }
+}
 Fl_RGB_Image *loadPPM(const char *filename) {
     ifstream file(filename, ios::binary);
     if (!file) {
@@ -113,7 +127,7 @@ void choose_file(Fl_Widget *w, void *data) {
 }
 
 
-void process_image(Fl_Widget *w, void *data) {
+void process_image(Fl_Widget* w, void* data) {
     if (selected_file.empty()) {
         cout << "No file selected!" << endl;
         return;
@@ -122,39 +136,36 @@ void process_image(Fl_Widget *w, void *data) {
     Image img(selected_file, Image::PPM);
     img.read();
 
-
     if (genererSLICC) {
         Image imgLAB = img.RGBtoLAB();
-        //imgLAB.write(selected_file);
         int N = img.getSize();
-        string nomFichierSortieSLICC =
-                selected_file.substr(0, selected_file.find_last_of('.')) + "_SLICC_" + to_string(k) + "_" +
-                to_string(m) + ".ppm";
+        std::string nomFichierSortieSLICC = output_directory + "/" +
+                                            selected_file.substr(selected_file.find_last_of('/') + 1, selected_file.find_last_of('.') - selected_file.find_last_of('/') - 1) +
+                                            "_SLICC_" + to_string(k) + "_" + to_string(m) + ".ppm";
         imgLAB.SLICC(k, m, N, contourSLICC, nomFichierSortieSLICC);
         Image imgOUT = imgLAB.LABtoRGB();
         imgOUT.write(nomFichierSortieSLICC);
-        //img.genererCourbePSNR(imgLAB, img, 100, 2000, 10, 50, N);
+
 
         if (compressSLICC) {
             Image imgOUTLAB = imgOUT.RGBtoLAB();
             img.compressionPallette(imgOUT, nomFichierSortieSLICC);
         }
-        if (!nomFichierSortieSLICC.empty() && (selected_format == "JPG" || selected_format == "PNG")) {
+        if (!nomFichierSortieSLICC.empty() && (selected_format !="PPM")) {
             std::string converted_file = nomFichierSortieSLICC.substr(0, nomFichierSortieSLICC.find_last_of('.')) + "." + selected_format;
             std::string command = "convert " + nomFichierSortieSLICC + " " + converted_file; // Requires ImageMagick
             system(command.c_str());
             cout << "Image saved as: " << converted_file << endl;
         }
 
-
     }
 
     if (genererMeanShift) {
         Image imgLAB = img.RGBtoLAB();
-        string nomFichierSortieMean = selected_file.substr(0, selected_file.find_last_of('.')) + "_MeanShift_" +
-                                      floatToString(color_radius, 2) + "_" + floatToString(spatial_radius, 2) + ".ppm";
-        Image segmentedImg = imgLAB.MeanShiftSegmentation(spatial_radius, color_radius, max_iterations,
-                                                          contourMeanShift, nomFichierSortieMean);
+        std::string nomFichierSortieMean = output_directory + "/" +
+                                           selected_file.substr(selected_file.find_last_of('/') + 1, selected_file.find_last_of('.') - selected_file.find_last_of('/') - 1) +
+                                           "_MeanShift_" + floatToString(color_radius, 2) + "_" + floatToString(spatial_radius, 2) + ".ppm";
+        Image segmentedImg = imgLAB.MeanShiftSegmentation(spatial_radius, color_radius, max_iterations, contourMeanShift, nomFichierSortieMean);
         Image resultImg = segmentedImg.LABtoRGB();
         resultImg.write(nomFichierSortieMean);
 
@@ -163,11 +174,16 @@ void process_image(Fl_Widget *w, void *data) {
             img.compressionPallette(resultImg, nomFichierSortieMean);
         }
 
-
+        if (!nomFichierSortieMean.empty() && (selected_format !="PPM")) {
+            std::string converted_file = nomFichierSortieMean.substr(0, nomFichierSortieMean.find_last_of('.')) + "." + selected_format;
+            std::string command = "convert " + nomFichierSortieMean + " " + converted_file; // Requires ImageMagick
+            system(command.c_str());
+            cout << "Image saved as: " << converted_file << endl;
+        }
 
     }
 
-    Fl_Progress *progress = (Fl_Progress *) data;
+    Fl_Progress* progress = (Fl_Progress*)data;
     progress->value(100);
 }
 
@@ -205,37 +221,41 @@ void toggle_genererMeanShift(Fl_Widget *w, void *data) {
     update_process_button();
 }
 
-int main(int argc, char **argv) {
+int main(int argc, char** argv) {
     Fl_Window* window = new Fl_Window(800, 800, "Image Processing");
 
-    Fl_Button* choose_button = new Fl_Button(10, 10, 100, 30, "Choose Image");
+    Fl_Button* choose_button = new Fl_Button(10, 10, 200, 30, "Choose Image");
     Fl_Box* file_box = new Fl_Box(120, 10, 470, 30, "No file chosen");
 
-    Fl_Check_Button* slicc_button = new Fl_Check_Button(10, 50, 150, 30, "Generate SLICC");
-    contour_slicc_button = new Fl_Check_Button(10, 90, 150, 30, "Contour SLICC");
-    compress_slicc_button = new Fl_Check_Button(10, 130, 150, 30, "Compress SLICC");
-    Fl_Input* k_input = new Fl_Int_Input(300, 50, 100, 30, "k:");
+    Fl_Button* output_dir_button = new Fl_Button(10, 50, 200, 30, "Choose Output Directory");
+    Fl_Box* output_dir_box = new Fl_Box(120, 50, 470, 30, "No Directory chosen");
+    output_dir_button->callback(choose_output_directory);
+
+    Fl_Check_Button* slicc_button = new Fl_Check_Button(10, 90, 150, 30, "Generate SLICC");
+    contour_slicc_button = new Fl_Check_Button(10, 130, 150, 30, "Contour SLICC");
+    compress_slicc_button = new Fl_Check_Button(10, 170, 150, 30, "Compress SLICC");
+    Fl_Input* k_input = new Fl_Int_Input(300, 90, 100, 30, "k:");
 
     k_input->deactivate();
-    Fl_Input* m_input = new Fl_Int_Input(300, 90, 100, 30, "m:");
+    Fl_Input* m_input = new Fl_Int_Input(300, 130, 100, 30, "m:");
     m_input->deactivate();
 
-    Fl_Check_Button* mean_shift_button = new Fl_Check_Button(10, 170, 150, 30, "Generate Mean Shift");
-    contour_mean_shift_button = new Fl_Check_Button(10, 210, 150, 30, "Contour Mean Shift");
-    compress_mean_shift_button = new Fl_Check_Button(10, 250, 165, 30, "Compress Mean Shift");
-    Fl_Input* spatial_input = new Fl_Int_Input(300, 170, 100, 30, "Spatial Radius:");
+    Fl_Check_Button* mean_shift_button = new Fl_Check_Button(10, 210, 150, 30, "Generate Mean Shift");
+    contour_mean_shift_button = new Fl_Check_Button(10, 250, 150, 30, "Contour Mean Shift");
+    compress_mean_shift_button = new Fl_Check_Button(10, 290, 165, 30, "Compress Mean Shift");
+    Fl_Input* spatial_input = new Fl_Int_Input(300, 210, 100, 30, "Spatial Radius:");
     spatial_input->deactivate();
-    Fl_Input* color_input = new Fl_Int_Input(300, 210, 100, 30, "Color Radius:");
+    Fl_Input* color_input = new Fl_Int_Input(300, 250, 100, 30, "Color Radius:");
     color_input->deactivate();
 
-    save_as_button = new Fl_Button(10, 290, 150, 30, "Save As");
-    format_choice = new Fl_Choice(300, 290, 100, 30, "Format:");
+    save_as_button = new Fl_Button(10, 330, 150, 30, "Save As");
+    format_choice = new Fl_Choice(300, 330, 100, 30, "Format:");
     format_choice->add("JPG|PNG");
     format_choice->value(0); // Default to JPG
     format_choice->callback(save_as_callback, format_choice);
 
-    process_button = new Fl_Button(10, 330, 100, 30, "Process Image");
-    Fl_Progress* progress = new Fl_Progress(120, 330, 470, 30);
+    process_button = new Fl_Button(10, 370, 100, 30, "Process Image");
+    Fl_Progress* progress = new Fl_Progress(120, 370, 470, 30);
     progress->minimum(0);
     progress->maximum(100);
 
@@ -243,6 +263,7 @@ int main(int argc, char **argv) {
     Fl_Input* mean_shift_inputs[] = {spatial_input, color_input};
 
     choose_button->callback(choose_file, file_box);
+    output_dir_button->callback(choose_output_directory, output_dir_box);
     slicc_button->callback(toggle_genererSLICC, slicc_inputs);
     contour_slicc_button->deactivate();
     compress_slicc_button->deactivate();
@@ -279,6 +300,9 @@ int main(int argc, char **argv) {
     compress_mean_shift_button->callback([](Fl_Widget* w, void* data) {
         compressMeanShift = ((Fl_Check_Button*)w)->value();
     });
+
+
+
 
     window->end();
     window->show(argc, argv);
