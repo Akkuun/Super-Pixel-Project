@@ -1,6 +1,0 @@
-/home/paradox/Bureau/M1S2/compression/Super-Pixel-Project/Code/build/CMakeFiles/turboPixelProjet.dir
-/home/paradox/Bureau/M1S2/compression/Super-Pixel-Project/Code/build/CMakeFiles/profile.dir
-/home/paradox/Bureau/M1S2/compression/Super-Pixel-Project/Code/build/CMakeFiles/optimize.dir
-/home/paradox/Bureau/M1S2/compression/Super-Pixel-Project/Code/build/CMakeFiles/clean-all.dir
-/home/paradox/Bureau/M1S2/compression/Super-Pixel-Project/Code/build/CMakeFiles/edit_cache.dir
-/home/paradox/Bureau/M1S2/compression/Super-Pixel-Project/Code/build/CMakeFiles/rebuild_cache.dir
