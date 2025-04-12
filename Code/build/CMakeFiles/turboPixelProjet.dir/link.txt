@@ -1,0 +1,1 @@
+/usr/bin/c++  -Wall -std=gnu++17 -O3 -march=native -flto -funroll-loops -fopenmp  -flto -fopenmp CMakeFiles/turboPixelProjet.dir/FonctionsImages.cpp.o CMakeFiles/turboPixelProjet.dir/main.cpp.o CMakeFiles/turboPixelProjet.dir/Image.cpp.o CMakeFiles/turboPixelProjet.dir/image_ppm.cpp.o -o turboPixelProjet  /usr/lib/x86_64-linux-gnu/libfltk.so 
