@@ -48,6 +48,7 @@ This project is a **C++ Image Processing Application** to tranform images into s
    
 3. Build the application:
    ```bash
+   cd /Code
    mkdir build
    cd build
    cmake ..
@@ -132,6 +133,7 @@ Ce projet est une **application de traitement d'images en C++** permettant de tr
    
 3. Construisez l'application :
    ```bash
+    cd /Code
    mkdir build
    cd build
    cmake ..
