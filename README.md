@@ -8,7 +8,7 @@ This project is a **C++ Image Processing Application** to tranform images into s
 
 ## Screenshots
 
-![img_1.png](img_1.png) ![img_3.png](img_3.png) ![img_4.png](img_4.png)
+![img_1.png](Image/README/img_1.png) ![img_3.png](Image/README/img_3.png) ![img_4.png](Image/README/img_4.png)
 
 
 ## Features
@@ -66,7 +66,7 @@ This project is a **C++ Image Processing Application** to tranform images into s
    - Process Image: Click the "Process Image" button to start processing.
    - Preview Image: Use the "Preview Image" button to view the original or processed image. 
    
-![img.png](img.png)
+![img.png](Image/README/img.png)
 ### File Format Support:
 - Input: PPM, JPG, PNG
 - Output: JPG, PNG, PPM
